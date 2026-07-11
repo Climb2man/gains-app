@@ -1,0 +1,260 @@
+{
+  "brand": "Chipotle",
+  "aliases": ["chipotle"],
+  "source": "Chipotle US Nutrition Facts (paper menu, 3/2025)",
+  "items": [
+    {
+      "name": "Flour Tortilla (burrito)",
+      "portion": "1 ea",
+      "calories": 320,
+      "protein_g": 8,
+      "carbs_g": 50,
+      "fat_g": 9,
+      "fiber_g": 3,
+      "sugar_g": 0,
+      "sodium_mg": 600
+    },
+    {
+      "name": "Flour Tortilla (taco)",
+      "portion": "1 ea",
+      "calories": 80,
+      "protein_g": 2,
+      "carbs_g": 13,
+      "fat_g": 2.5,
+      "fiber_g": 0.5,
+      "sugar_g": 0,
+      "sodium_mg": 160
+    },
+    {
+      "name": "Crispy Corn Tortilla",
+      "portion": "1 ea",
+      "calories": 70,
+      "protein_g": 1,
+      "carbs_g": 10,
+      "fat_g": 3,
+      "fiber_g": 1,
+      "sugar_g": 0,
+      "sodium_mg": 0
+    },
+    {
+      "name": "Cilantro-Lime Brown Rice",
+      "portion": "4 oz",
+      "calories": 210,
+      "protein_g": 4,
+      "carbs_g": 36,
+      "fat_g": 6,
+      "fiber_g": 2,
+      "sugar_g": 0,
+      "sodium_mg": 190
+    },
+    {
+      "name": "Cilantro-Lime White Rice",
+      "portion": "4 oz",
+      "calories": 210,
+      "protein_g": 4,
+      "carbs_g": 40,
+      "fat_g": 4,
+      "fiber_g": 1,
+      "sugar_g": 0,
+      "sodium_mg": 350
+    },
+    {
+      "name": "Black Beans",
+      "portion": "4 oz",
+      "calories": 130,
+      "protein_g": 8,
+      "carbs_g": 22,
+      "fat_g": 1.5,
+      "fiber_g": 7,
+      "sugar_g": 2,
+      "sodium_mg": 210
+    },
+    {
+      "name": "Pinto Beans",
+      "portion": "4 oz",
+      "calories": 130,
+      "protein_g": 8,
+      "carbs_g": 21,
+      "fat_g": 1.5,
+      "fiber_g": 8,
+      "sugar_g": 1,
+      "sodium_mg": 210
+    },
+    {
+      "name": "Fajita Vegetables",
+      "portion": "2 oz",
+      "calories": 20,
+      "protein_g": 1,
+      "carbs_g": 5,
+      "fat_g": 0,
+      "fiber_g": 1,
+      "sugar_g": 2,
+      "sodium_mg": 150
+    },
+    {
+      "name": "Barbacoa",
+      "portion": "4 oz",
+      "calories": 170,
+      "protein_g": 24,
+      "carbs_g": 2,
+      "fat_g": 7,
+      "fiber_g": 1,
+      "sugar_g": 0,
+      "sodium_mg": 530
+    },
+    {
+      "name": "Chicken",
+      "portion": "4 oz",
+      "calories": 180,
+      "protein_g": 32,
+      "carbs_g": 0,
+      "fat_g": 7,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 310
+    },
+    {
+      "name": "Carnitas",
+      "portion": "4 oz",
+      "calories": 210,
+      "protein_g": 23,
+      "carbs_g": 0,
+      "fat_g": 12,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 450
+    },
+    {
+      "name": "Steak",
+      "portion": "4 oz",
+      "calories": 150,
+      "protein_g": 21,
+      "carbs_g": 1,
+      "fat_g": 6,
+      "fiber_g": 1,
+      "sugar_g": 0,
+      "sodium_mg": 330
+    },
+    {
+      "name": "Sofritas",
+      "portion": "4 oz",
+      "calories": 150,
+      "protein_g": 8,
+      "carbs_g": 9,
+      "fat_g": 10,
+      "fiber_g": 3,
+      "sugar_g": 5,
+      "sodium_mg": 560
+    },
+    {
+      "name": "Fresh Tomato Salsa",
+      "portion": "4 oz",
+      "calories": 25,
+      "protein_g": 0,
+      "carbs_g": 4,
+      "fat_g": 0,
+      "fiber_g": 1,
+      "sugar_g": 1,
+      "sodium_mg": 550
+    },
+    {
+      "name": "Roasted Chili-Corn Salsa",
+      "portion": "4 oz",
+      "calories": 80,
+      "protein_g": 3,
+      "carbs_g": 16,
+      "fat_g": 1.5,
+      "fiber_g": 3,
+      "sugar_g": 4,
+      "sodium_mg": 330
+    },
+    {
+      "name": "Tomatillo-Green Chili Salsa",
+      "portion": "2 fl oz",
+      "calories": 15,
+      "protein_g": 0,
+      "carbs_g": 4,
+      "fat_g": 0,
+      "fiber_g": 0,
+      "sugar_g": 2,
+      "sodium_mg": 260
+    },
+    {
+      "name": "Tomatillo-Red Chili Salsa",
+      "portion": "2 fl oz",
+      "calories": 30,
+      "protein_g": 0,
+      "carbs_g": 4,
+      "fat_g": 0,
+      "fiber_g": 1,
+      "sugar_g": 0,
+      "sodium_mg": 500
+    },
+    {
+      "name": "Cheese",
+      "portion": "1 oz",
+      "calories": 110,
+      "protein_g": 6,
+      "carbs_g": 1,
+      "fat_g": 8,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 190
+    },
+    {
+      "name": "Sour Cream",
+      "portion": "2 oz",
+      "calories": 110,
+      "protein_g": 2,
+      "carbs_g": 2,
+      "fat_g": 9,
+      "fiber_g": 0,
+      "sugar_g": 2,
+      "sodium_mg": 30
+    },
+    {
+      "name": "Guacamole",
+      "portion": "4 oz",
+      "calories": 230,
+      "protein_g": 2,
+      "carbs_g": 8,
+      "fat_g": 22,
+      "fiber_g": 6,
+      "sugar_g": 1,
+      "sodium_mg": 370
+    },
+    {
+      "name": "Queso Blanco",
+      "portion": "2 oz",
+      "calories": 120,
+      "protein_g": 5,
+      "carbs_g": 4,
+      "fat_g": 9,
+      "fiber_g": 0,
+      "sugar_g": 1,
+      "sodium_mg": 250
+    },
+    {
+      "name": "Chips",
+      "portion": "4 oz",
+      "calories": 540,
+      "protein_g": 7,
+      "carbs_g": 73,
+      "fat_g": 25,
+      "fiber_g": 7,
+      "sugar_g": 1,
+      "sodium_mg": 390
+    },
+    {
+      "name": "Chipotle-Honey Vinaigrette",
+      "portion": "2 fl oz",
+      "calories": 220,
+      "protein_g": 1,
+      "carbs_g": 18,
+      "fat_g": 16,
+      "fiber_g": 1,
+      "sugar_g": 12,
+      "sodium_mg": 850
+    }
+  ]
+}

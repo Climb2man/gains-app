@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- RELEASE (device / TestFlight) entitlements. Identical to the generated Gains.entitlements EXCEPT the
+     keychain-access-group is team-prefixed with $(AppIdentifierPrefix), a signed device profile grants
+     keychain groups in the form TEAMID.<group>, so the bare "com.nxw.gains.shared" (which the unsigned
+     simulator build needs) would fail the signing match. Debug keeps the bare group via Gains.entitlements.
+     KeychainStore passes a nil access group on device, so it uses this group as the app's default. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.nxw.gains</string>
+	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.nxw.gains.shared</string>
+	</array>
+</dict>
+</plist>

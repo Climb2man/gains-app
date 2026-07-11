@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template for the App Store export config used by `xcodebuild -exportArchive` (TestFlight uploads).
+     scripts/ship-testflight.sh renders this to the gitignored ExportOptions.plist, substituting
+     __TEAM_ID__ with DEVELOPMENT_TEAM from the repo-root .env. The rendered file is NOT committed:
+     this is a public repo and the team ID ties it to a personal Apple account. Distribution re-signing
+     is automatic via the Xcode-account session (-allowProvisioningUpdates). See .env.example. -->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>__TEAM_ID__</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>destination</key>
+    <string>export</string>
+</dict>
+</plist>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Privacy manifest for the Gains app (Apple-required for App Store submission).
+
+  Gains is LOCAL-FIRST: the user's health data stays on the device. The developer operates no server and
+  collects nothing, so NSPrivacyCollectedDataTypes is empty.
+
+  AI egress (all of it on the USER's OWN BYOK OpenRouter key: the user sharing their own data with a
+  provider they chose, not the developer collecting it). Two surfaces reach the network:
+    1. Food logging, FoodAINutritionService, sends the food line the user typed.
+    2. Workout logging, WorkoutParseService, sends the free-text workout the user typed.
+  Both also carry the user's two formatting settings (calorie bias, micronutrient toggles). The food
+  surface additionally has a VISION lane, FoodVisionService, which sends a JPEG the user shot: a meal
+  photo, a nutrition label, or a restaurant menu, inline as base64 in the one request.
+
+  What is NEVER sent: profile (age/height/weight), Whoop metrics, HRV, recovery, sleep, workouts other
+  than the line being parsed, and any device or account identifier. The request carries only the user's
+  own key plus a static HTTP-Referer / X-Title, see OpenRouterProvider in Sources/Services/AIProvider.swift.
+
+  KEEP IN SYNC: the App Store Connect privacy "label" is where user-facing data-use disclosure lives, and
+  the vision lane means PHOTOS are a disclosed data type there. This manifest covers only SDK collection +
+  required-reason APIs, of which the one used is UserDefaults for the app's own storage.
+
+  No tracking, no tracking domains. Required-reason API: UserDefaults (CA92.1, the app accesses info from
+  itself, i.e. reads/writes its own defaults, never shared with other apps). Audited: no file-timestamp,
+  disk-space, or system-boot-time required-reason APIs are used.
+-->
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

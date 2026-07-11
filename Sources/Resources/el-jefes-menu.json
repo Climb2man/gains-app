@@ -1,0 +1,249 @@
+{
+  "brand": "El Jefe's Taqueria",
+  "aliases": ["jefe", "jefes"],
+  "source": "Estimated (El Jefe's does not publish official nutrition; values approximated from typical taqueria portions)",
+  "items": [
+    {
+      "name": "Pollo Asado (grilled chicken)",
+      "portion": "4 oz",
+      "calories": 180,
+      "protein_g": 27,
+      "carbs_g": 0,
+      "fat_g": 7,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 520
+    },
+    {
+      "name": "Carne Asada (grilled steak)",
+      "portion": "4 oz",
+      "calories": 220,
+      "protein_g": 26,
+      "carbs_g": 0,
+      "fat_g": 12,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 560
+    },
+    {
+      "name": "Carnitas (braised pork)",
+      "portion": "4 oz",
+      "calories": 210,
+      "protein_g": 24,
+      "carbs_g": 0,
+      "fat_g": 12,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 450
+    },
+    {
+      "name": "Al Pastor (spit-grilled pork)",
+      "portion": "4 oz",
+      "calories": 220,
+      "protein_g": 24,
+      "carbs_g": 4,
+      "fat_g": 11,
+      "fiber_g": 0,
+      "sugar_g": 3,
+      "sodium_mg": 520
+    },
+    {
+      "name": "Carne Molida Picante (spicy ground beef)",
+      "portion": "4 oz",
+      "calories": 250,
+      "protein_g": 23,
+      "carbs_g": 2,
+      "fat_g": 16,
+      "fiber_g": 0,
+      "sugar_g": 1,
+      "sodium_mg": 600
+    },
+    {
+      "name": "Chorizo",
+      "portion": "4 oz",
+      "calories": 290,
+      "protein_g": 20,
+      "carbs_g": 2,
+      "fat_g": 22,
+      "fiber_g": 0,
+      "sugar_g": 1,
+      "sodium_mg": 780
+    },
+    {
+      "name": "Camarones (sauteed shrimp)",
+      "portion": "4 oz",
+      "calories": 140,
+      "protein_g": 26,
+      "carbs_g": 1,
+      "fat_g": 4,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 430
+    },
+    {
+      "name": "Pescado (fried tilapia)",
+      "portion": "4 oz",
+      "calories": 230,
+      "protein_g": 20,
+      "carbs_g": 13,
+      "fat_g": 11,
+      "fiber_g": 0,
+      "sugar_g": 1,
+      "sodium_mg": 420
+    },
+    {
+      "name": "Vegetariano (roasted vegetables)",
+      "portion": "4 oz",
+      "calories": 70,
+      "protein_g": 2,
+      "carbs_g": 10,
+      "fat_g": 3,
+      "fiber_g": 3,
+      "sugar_g": 4,
+      "sodium_mg": 180
+    },
+    {
+      "name": "Cilantro-Lime Rice",
+      "portion": "4 oz",
+      "calories": 180,
+      "protein_g": 3,
+      "carbs_g": 34,
+      "fat_g": 4,
+      "fiber_g": 1,
+      "sugar_g": 0,
+      "sodium_mg": 340
+    },
+    {
+      "name": "Black Beans",
+      "portion": "4 oz",
+      "calories": 130,
+      "protein_g": 8,
+      "carbs_g": 20,
+      "fat_g": 2,
+      "fiber_g": 7,
+      "sugar_g": 1,
+      "sodium_mg": 360
+    },
+    {
+      "name": "Pinto Beans",
+      "portion": "4 oz",
+      "calories": 130,
+      "protein_g": 8,
+      "carbs_g": 20,
+      "fat_g": 2,
+      "fiber_g": 7,
+      "sugar_g": 1,
+      "sodium_mg": 370
+    },
+    {
+      "name": "Flour Tortilla burrito",
+      "portion": "1 ea",
+      "calories": 320,
+      "protein_g": 9,
+      "carbs_g": 54,
+      "fat_g": 8,
+      "fiber_g": 2,
+      "sugar_g": 2,
+      "sodium_mg": 720
+    },
+    {
+      "name": "Corn Tortilla taco",
+      "portion": "1 ea",
+      "calories": 60,
+      "protein_g": 1,
+      "carbs_g": 12,
+      "fat_g": 1,
+      "fiber_g": 2,
+      "sugar_g": 0,
+      "sodium_mg": 20
+    },
+    {
+      "name": "Shredded Cheese",
+      "portion": "1 oz",
+      "calories": 110,
+      "protein_g": 7,
+      "carbs_g": 1,
+      "fat_g": 9,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 180
+    },
+    {
+      "name": "Sour Cream",
+      "portion": "2 oz",
+      "calories": 120,
+      "protein_g": 2,
+      "carbs_g": 3,
+      "fat_g": 10,
+      "fiber_g": 0,
+      "sugar_g": 2,
+      "sodium_mg": 50
+    },
+    {
+      "name": "Guacamole",
+      "portion": "2 oz",
+      "calories": 90,
+      "protein_g": 1,
+      "carbs_g": 5,
+      "fat_g": 8,
+      "fiber_g": 4,
+      "sugar_g": 0,
+      "sodium_mg": 170
+    },
+    {
+      "name": "Pico de Gallo",
+      "portion": "2 oz",
+      "calories": 15,
+      "protein_g": 1,
+      "carbs_g": 3,
+      "fat_g": 0,
+      "fiber_g": 1,
+      "sugar_g": 2,
+      "sodium_mg": 140
+    },
+    {
+      "name": "Queso",
+      "portion": "2 oz",
+      "calories": 120,
+      "protein_g": 5,
+      "carbs_g": 5,
+      "fat_g": 9,
+      "fiber_g": 0,
+      "sugar_g": 2,
+      "sodium_mg": 470
+    },
+    {
+      "name": "Salsa Roja",
+      "portion": "2 oz",
+      "calories": 20,
+      "protein_g": 1,
+      "carbs_g": 4,
+      "fat_g": 0,
+      "fiber_g": 1,
+      "sugar_g": 2,
+      "sodium_mg": 180
+    },
+    {
+      "name": "Salsa Verde",
+      "portion": "2 oz",
+      "calories": 20,
+      "protein_g": 1,
+      "carbs_g": 4,
+      "fat_g": 0,
+      "fiber_g": 1,
+      "sugar_g": 2,
+      "sodium_mg": 170
+    },
+    {
+      "name": "Romaine Lettuce",
+      "portion": "1 oz",
+      "calories": 5,
+      "protein_g": 0,
+      "carbs_g": 1,
+      "fat_g": 0,
+      "fiber_g": 0,
+      "sugar_g": 0,
+      "sodium_mg": 10
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "as_of": "2026-06-19T14:02:00-07:00",
+  "timezone": "America/Los_Angeles",
+  "profile": {
+    "name": "Ricardo",
+    "sex": "male",
+    "age_years": 31,
+    "height": "5'11\"",
+    "weight_lb": 178.4,
+    "goals": { "calories": 2200, "protein_g": 180, "carb_g": 200, "fat_g": 70, "steps": 9000 }
+  },
+  "streaks": { "current_days": 5, "longest_days": 23, "last7": { "hits": 6, "total": 7 } },
+  "nutrition": {
+    "days": [
+      { "date": "2026-06-18", "calories": 2210, "protein_g": 172, "carb_g": 198, "fat_g": 71,
+        "sugar_g": 60, "fiber_g": 31, "sodium_mg": 2900, "water_ml": 2600 },
+      { "date": "2026-06-19", "calories": 1160, "protein_g": 78, "carb_g": 110, "fat_g": 38,
+        "sugar_g": 28, "fiber_g": 14, "sodium_mg": 1400, "water_ml": 1200,
+        "journal": [
+          { "text": "eggs and oats", "logged_at": "2026-06-19T08:00:00-07:00", "status": "resolved",
+            "items": [ { "name": "Scrambled eggs (3)", "calories": 270, "protein_g": 19, "carb_g": 2, "fat_g": 20, "assumptions": "cooked in 1 tsp butter" },
+                       { "name": "Oatmeal", "calories": 270, "protein_g": 11, "carb_g": 48, "fat_g": 5 } ] },
+          { "text": "turkey sandwich", "logged_at": "2026-06-19T12:30:00-07:00", "status": "resolved",
+            "items": [ { "name": "Turkey sandwich", "calories": 620, "protein_g": 44, "carb_g": 58, "fat_g": 20, "confidence": 0.8 } ] }
+        ] }
+    ]
+  },
+  "workouts": {
+    "days": [
+      { "date": "2026-06-19", "sessions": [
+        { "title": "Push day", "logged_at": "2026-06-19T17:30:00-07:00", "raw": "bench 5x5 @185, ohp 3x8",
+          "exercises": ["Bench press 5×5 @ 185 lb", "Overhead press 3×8"] }
+      ] }
+    ]
+  },
+  "whoop": {
+    "days": [
+      { "date": "2026-06-18", "recovery_pct": 71, "hrv_ms": 58, "resting_hr_bpm": 49, "sleep_hours": 7.4, "sleep_performance_pct": 88, "day_strain": 12.8, "calories_burned": 2330, "steps": 9100 },
+      { "date": "2026-06-19", "recovery_pct": 62, "hrv_ms": 48, "resting_hr_bpm": 51, "sleep_hours": 7.1, "sleep_performance_pct": 81, "day_strain": 11.4, "calories_burned": 2255, "steps": 8200 }
+    ]
+  },
+  "weight": {
+    "points": [
+      { "date": "2026-05-22", "lb": 182.6, "body_fat_pct": 16.9 },
+      { "date": "2026-05-29", "lb": 181.4, "body_fat_pct": 16.6 },
+      { "date": "2026-06-05", "lb": 180.8, "body_fat_pct": 16.3 },
+      { "date": "2026-06-12", "lb": 180.2, "body_fat_pct": 16.1 },
+      { "date": "2026-06-19", "lb": 178.4, "body_fat_pct": 15.8 }
+    ]
+  }
+}

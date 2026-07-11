@@ -1,0 +1,27 @@
+# Xcode / XcodeGen (project is generated from project.yml)
+*.xcodeproj/
+*.xcworkspace/
+Gains-Info.plist
+GainsWidget-Info.plist
+.build/
+DerivedData/
+*.xcresult
+*.xcarchive
+
+# Node (server/)
+node_modules/
+server/dist/
+
+# Secrets / environment, never commit
+.env
+.env.*
+!.env.example
+
+# Rendered from ExportOptions.plist.template by scripts/ship-testflight.sh, carries the Apple
+# Developer Team ID from .env. The template is the committed artifact, never the rendered file.
+ExportOptions.plist
+
+# macOS
+.DS_Store
+
+Gains.xcodeproj/

@@ -1,0 +1,13 @@
+# secrets: no .env variant is ever committable
+.env*
+!.env.example
+
+# build output
+dist/
+*.tsbuildinfo
+
+# deps
+node_modules/
+
+# fly generates this on first deploy
+fly.toml
