@@ -31,7 +31,7 @@ struct KeychainStore: SecureStore {
     ///   - accessGroup: the `keychain-access-groups` entry the items live under. Defaults to the group
     ///     declared in `Gains.entitlements` so an unsigned simulator build can read/write the keychain.
     init(
-        service: String = Bundle.main.bundleIdentifier ?? "com.nxw.gains",
+        service: String = Bundle.main.bundleIdentifier ?? "com.kevin.gains",
         accessGroup: String? = KeychainStore.defaultAccessGroup
     ) {
         self.service = service
@@ -40,11 +40,14 @@ struct KeychainStore: SecureStore {
 
     /// The access group the queries target, kept in one place so the entitlement and the queries can't
     /// drift apart. The unsigned simulator build must name the bare group from `Gains.entitlements`
-    /// (without it `SecItem*` fails with -34018). A signed device build passes `nil` so the keychain
-    /// uses the app's default group, the team-prefixed `$(AppIdentifierPrefix)com.nxw.gains.shared`
-    /// from `Gains-Release.entitlements`; a bare runtime group would never match that value.
+    /// (without it `SecItem*` fails with -34018). A signed device build passes `nil`, so the keychain
+    /// uses the app's automatic default group (`$(AppIdentifierPrefix)` + the bundle id). This sideload
+    /// fork therefore declares NO `keychain-access-groups` in `Gains-Release.entitlements`: a free
+    /// personal-team profile from Sideloadly grants the default group anyway, and naming an explicit
+    /// group would only risk an entitlement/profile mismatch at signing time. Whoop tokens and the
+    /// OpenRouter key still persist normally on device.
     #if targetEnvironment(simulator)
-    static let defaultAccessGroup: String? = "com.nxw.gains.shared"
+    static let defaultAccessGroup: String? = "com.kevin.gains.shared"
     #else
     static let defaultAccessGroup: String? = nil
     #endif

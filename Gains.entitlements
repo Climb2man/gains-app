@@ -4,13 +4,9 @@
 <dict>
 	<key>com.apple.developer.healthkit</key>
 	<true/>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.nxw.gains</string>
-	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>com.nxw.gains.shared</string>
+		<string>com.kevin.gains.shared</string>
 	</array>
 </dict>
 </plist>

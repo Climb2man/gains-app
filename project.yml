@@ -1,6 +1,6 @@
 name: Gains
 options:
-  bundleIdPrefix: com.gains
+  bundleIdPrefix: com.kevin
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
@@ -45,10 +45,10 @@ targets:
       - path: Sources
         excludes:
           - "Widget/**"
-    # Embed the WidgetKit extension so the app bundle carries it (a widget can only be installed via its
-    # containing app). XcodeGen copies the built `.appex` into the app's PlugIns and adds the build dep.
-    dependencies:
-      - target: GainsWidget
+    # NOTE (sideload fork): the GainsWidget extension target has been removed. A WidgetKit extension can
+    # only share data with its host app through an App Group, and App Groups are a team-scoped
+    # entitlement Apple does not issue to free personal teams. Sources/Widget/** stays on disk but is
+    # excluded above, so its `@main GainsWidgetBundle` never compiles. Everything else is unchanged.
     # Attach the unit-test bundle to the auto-generated Gains scheme's Test action so
     # `xcodebuild test -scheme Gains` runs it (xcodegen doesn't infer this from the dependency alone).
     scheme:
@@ -57,14 +57,16 @@ targets:
         - GainsUITests
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.nxw.gains
+        PRODUCT_BUNDLE_IDENTIFIER: com.kevin.gains
       configs:
         # Per-config entitlements, set manually instead of via the `entitlements:` property, that property
         # forces CODE_SIGN_ENTITLEMENTS for BOTH configs, so a per-config override there is ignored. Here
         # the Release override wins. Debug = Gains.entitlements (bare keychain group) so the UNSIGNED
-        # simulator keychain works (SecItem* needs a declared group it can target, else -34018). Release =
-        # Gains-Release.entitlements (team-prefixed `$(AppIdentifierPrefix)com.nxw.gains.shared`) which a
-        # signed device profile grants. Both files also carry HealthKit + the GainsWidget App Group.
+        # simulator keychain works (SecItem* needs a declared group it can target, else -34018).
+        # Release = Gains-Release.entitlements, which in this sideload fork is HealthKit ONLY: the App
+        # Group is gone with the widget target, and the keychain group is dropped because KeychainStore
+        # passes nil on device (see the #if targetEnvironment(simulator) split) so iOS grants the app's
+        # automatic default group. That keeps the entitlement set to what a free personal team can sign.
         Debug:
           CODE_SIGN_ENTITLEMENTS: Gains.entitlements
         Release:
@@ -98,42 +100,13 @@ targets:
         # flags photo-API references without one, and it costs nothing to be explicit.
         NSPhotoLibraryUsageDescription: "Gains lets you pick a food photo to estimate macros. The photo stays on your device; only the single estimate request leaves, on your own key."
 
-  # ── GainsWidget, the WidgetKit extension (today's-calories ring) ──────────────────────────────
-  # An app-extension target embedded in the Gains app. It compiles ONLY the widget's @main bundle
-  # (Sources/Widget), the SHARED snapshot/store/view (Sources/Shared/WidgetShared.swift), and the
-  # design tokens (Sources/DesignSystem/Theme.swift) the view reads, no other app code links in.
-  # The App Group `group.com.nxw.gains` is the only channel between the app and this extension.
-  GainsWidget:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: Sources/Widget
-      - path: Sources/Shared/WidgetShared.swift
-      - path: Sources/DesignSystem/Theme.swift
-    dependencies:
-      - sdk: WidgetKit.framework
-      - sdk: SwiftUI.framework
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.nxw.gains.GainsWidget
-    entitlements:
-      path: GainsWidget.entitlements
-      properties:
-        # Must match the app target's App Group so both processes read/write the same UserDefaults suite.
-        com.apple.security.application-groups:
-          - group.com.nxw.gains
-    info:
-      path: GainsWidget-Info.plist
-      properties:
-        # App Store validation requires the WidgetKit extension to carry its own display name.
-        CFBundleDisplayName: Gains
-        # The extension's version + build MUST match the host app's (App Store Connect requirement), so
-        # flow them from the same MARKETING_VERSION / CURRENT_PROJECT_VERSION.
-        CFBundleShortVersionString: "$(MARKETING_VERSION)"
-        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        # WidgetKit extension point, without this NSExtension key the .appex isn't recognized as a widget.
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  # ── GainsWidget target REMOVED in this sideload fork ──────────────────────────────────────────
+  # Upstream defined a WidgetKit app-extension here (lock-screen calories ring + day countdown). It is
+  # deleted because its only data channel to the app was the App Group `group.com.nxw.gains`, and Apple
+  # does not grant App Groups to free personal teams. Sources/Widget/** and GainsWidget.entitlements are
+  # left on disk untouched so this target can be restored verbatim from git history if you ever move to
+  # a paid Apple Developer account. Nothing in the app depends on it: NutritionStore still calls
+  # WidgetSharedStore.write(), which now lands in UserDefaults.standard and is simply never read.
 
   # ── GainsTests, unit tests for the safety-relevant pure-math modules ──────────────────────────
   # A hosted unit-test bundle covering the dependency-free math that powers General-Wellness-lane
@@ -150,7 +123,7 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
-        PRODUCT_BUNDLE_IDENTIFIER: com.nxw.gains.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.kevin.gains.tests
 
   # ── GainsUITests, UI automation to REPRODUCE the Overview carousel horizontal-pan bug ─────────────
   # Drives a swipe on the date carousel and captures before/after screenshots, so the gesture bug can be
@@ -166,5 +139,5 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: "YES"
-        PRODUCT_BUNDLE_IDENTIFIER: com.nxw.gains.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.kevin.gains.uitests
         TEST_TARGET_NAME: Gains

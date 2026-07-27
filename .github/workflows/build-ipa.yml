@@ -1,0 +1,71 @@
+name: Build unsigned IPA
+
+# Builds Gains on GitHub's macOS runners (free for public repositories) and uploads an UNSIGNED .ipa
+# as a workflow artifact. The .ipa is not installable as-is: Sideloadly / AltStore on Windows re-signs
+# it with your free Apple ID before pushing it to the iPhone. See SIDELOAD-README.md.
+
+on:
+  workflow_dispatch:        # lets you press "Run workflow" in the Actions tab whenever you want a build
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    env:
+      # project.yml reads this for the Release config's DEVELOPMENT_TEAM. We sign nothing here, so an
+      # empty value is correct; xcodegen expands it to "" and the code-signing flags below skip signing.
+      DEVELOPMENT_TEAM: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Gains.xcodeproj
+        run: xcodegen generate
+
+      - name: Build for device (unsigned)
+        # CODE_SIGN_STYLE=Manual is required alongside the disable flags: the Release config in
+        # project.yml sets Automatic signing, and automatic signing with an empty DEVELOPMENT_TEAM makes
+        # xcodebuild fail with "Signing for Gains requires a development team" before it ever compiles.
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Gains.xcodeproj \
+            -scheme Gains \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            build
+
+      - name: Package Payload/ into .ipa
+        # An .ipa is just a zip with the .app inside a top-level Payload/ directory. Sideloadly expects
+        # exactly this layout.
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release-iphoneos/Gains.app"
+          test -d "$APP" || { echo "::error::$APP not found"; ls -R build/Build/Products || true; exit 1; }
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry Gains-unsigned.ipa Payload
+          ls -lh Gains-unsigned.ipa
+
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gains-unsigned-ipa
+          path: Gains-unsigned.ipa
+          retention-days: 30
