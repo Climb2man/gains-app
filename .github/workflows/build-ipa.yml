@@ -11,7 +11,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    # macos-26, NOT macos-15. Sources/DesignSystem/Theme.swift calls `glassEffect(...)` and extends
+    # `Glass` (Liquid Glass), which are iOS 26 SDK symbols. They are correctly guarded at runtime with
+    # `if #available(iOS 26.0, *)`, but the symbols must still exist at COMPILE time. The macos-15 image
+    # ships Xcode 16.4 / iOS 18 SDK, which fails with "cannot find type 'Glass' in scope".
+    runs-on: macos-26
     timeout-minutes: 45
 
     env:
@@ -23,8 +27,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Select newest installed Xcode
+        # Runner images ship several Xcodes and the default is not always the newest. Pick the highest
+        # version explicitly so an image update can't silently drop us back to an older SDK.
+        run: |
+          set -euo pipefail
+          ls -d /Applications/Xcode*.app
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos
 
       - name: Install XcodeGen
         run: brew install xcodegen
