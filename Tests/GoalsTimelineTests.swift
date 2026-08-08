@@ -82,10 +82,10 @@ final class GoalsTimelineTests: XCTestCase {
         store.autoAdjustGoals(profile: baseProfile)
         XCTAssertEqual(store.goals, before, "no recipe + switch off = strict no-op")
 
-        store.setGoalRecipe(GoalRecipe(activity: "moderate", direction: "lose1"), autoAdjust: true)
+        store.setGoalRecipe(GoalRecipe(activity: "moderate", direction: "cut"), autoAdjust: true)
         store.autoAdjustGoals(profile: baseProfile)
         let expected = GoalCalculator.estimate(
-            profile: baseProfile, activity: .moderate, goal: .lose1
+            profile: baseProfile, activity: .moderate, goal: .cut
         )
         XCTAssertEqual(store.goals.calorieGoal, Double(expected.calorieGoal))
         XCTAssertEqual(store.goals.proteinGoal, Double(expected.proteinGoal))
@@ -94,7 +94,7 @@ final class GoalsTimelineTests: XCTestCase {
         var lighter = baseProfile
         lighter.weightKg = 88.4
         store.autoAdjustGoals(profile: lighter)
-        let lighterExpected = GoalCalculator.estimate(profile: lighter, activity: .moderate, goal: .lose1)
+        let lighterExpected = GoalCalculator.estimate(profile: lighter, activity: .moderate, goal: .cut)
         XCTAssertEqual(store.goals.calorieGoal, Double(lighterExpected.calorieGoal))
         XCTAssertLessThan(store.goals.calorieGoal, Double(expected.calorieGoal),
                           "less body mass = lower derived target")
