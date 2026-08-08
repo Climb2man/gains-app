@@ -54,6 +54,10 @@ protocol WhoopService: Sendable {
 
     /// WHOOP's sleep-need coaching for the night. nil when unlinked / not yet computed.
     func sleepNeed() async -> WhoopSleepNeed?
+
+    /// WHOOP's stored weight/height/max-HR. nil when unlinked or WHOOP holds no weight.
+    /// This is the app's weight source: a smart scale pushing to WHOOP lands here.
+    func bodyMeasurement() async -> WhoopBodyMeasurement?
 }
 
 /// The orchestrating client. An `actor`: the per-day cache state, in-flight de-dup, and
@@ -64,6 +68,19 @@ actor WhoopClient: WhoopService {
     private static let sleepDeepDivePath = "/home-service/v1/deep-dive/sleep/last-night"
     private static let strainDeepDivePath = "/home-service/v1/deep-dive/strain"
     private static let stressBffPrefix = "/health-service/v2/stress-bff/"
+    /// WHOOP's official-API body-measurement path, served to the app token. Not user-scoped.
+    private static let bodyMeasurementPath = "/developer/v2/user/measurement/body"
+    /// Body measurement changes at most a few times a day (a scale push), so 15 min is generous.
+    private static let bodyMeasurementTtlMs: Double = 15 * 60 * 1000
+
+    private struct BodyMeasurementCacheEntry {
+        let fetchedAt: Double
+        let value: WhoopBodyMeasurement
+    }
+
+    /// In-session only: deliberately NOT persisted. WHOOP stays the source of truth, and the
+    /// weigh-in that gets logged from it is already durable in WeightStore.
+    private var bodyMeasurementCache: BodyMeasurementCacheEntry?
 
     /// Stress monitor path: the date is a path segment here, not a `?date=` query.
     private static func stressPath(_ date: String) -> String {
@@ -404,6 +421,32 @@ actor WhoopClient: WhoopService {
         let anyValue = [model.recommendedMinutes, model.baselineMinutes, model.debtMinutes,
                         model.strainMinutes, model.napCreditMinutes].contains { $0 != nil }
         return anyValue ? model : nil
+    }
+
+    /// WHOOP's stored body measurement. Cached for 15 minutes like the other slow-moving reads:
+    /// a scale pushes at most a few readings a day, so re-fetching on every screen appearance
+    /// would be pure waste.
+    ///
+    /// Guards `weightKg > 0` deliberately. A WHOOP account with no weight (and the secondary
+    /// `custom:account_id` account) answers `0.0`, and logging that as a weigh-in would poison the
+    /// trend and the goal math with a zero.
+    func bodyMeasurement() async -> WhoopBodyMeasurement? {
+        let now = Date().timeIntervalSince1970 * 1000
+        if let cached = bodyMeasurementCache, now - cached.fetchedAt < Self.bodyMeasurementTtlMs {
+            return cached.value
+        }
+        let result = await authedGet(Self.bodyMeasurementPath, query: [:])
+        guard result.status == 200, let body = result.body,
+              let kg = body["weight_kilogram"].numberValue, kg > 0
+        else { return bodyMeasurementCache?.value }
+
+        let model = WhoopBodyMeasurement(
+            weightKg: kg,
+            heightMeters: body["height_meter"].numberValue.flatMap { $0 > 0 ? $0 : nil },
+            maxHeartRate: body["max_heart_rate"].numberValue.flatMap { $0 > 0 ? Int($0) : nil }
+        )
+        bodyMeasurementCache = BodyMeasurementCacheEntry(fetchedAt: now, value: model)
+        return model
     }
 
     /// Strain deep-dive (score + target band, HR-zone time + baselines, steps, strength).

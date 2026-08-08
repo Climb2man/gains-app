@@ -1,8 +1,14 @@
 import SwiftUI
 
+/// Weight trend, sourced entirely from WHOOP.
+///
+/// There is deliberately NO manual entry here. A smart scale pushes to WHOOP, `AppModel`'s
+/// `syncWeightFromWhoop()` reads WHOOP's stored measurement and logs the weigh-in. To correct a
+/// weight you change it in WHOOP and re-sync. (Apple Health was the original path but HealthKit
+/// cannot be provisioned on a free Apple ID, so it is gone.)
 struct WeightTrendCard: View {
     @Environment(AppModel.self) private var appModel
-    @State private var showLog = false
+    @State private var syncing = false
 
     /// The window the chart + delta cover.
     private let windowDays = 90
@@ -17,12 +23,9 @@ struct WeightTrendCard: View {
                 HStack(spacing: Theme.Spacing.sm) {
                     CardHeader(title: "WEIGHT", icon: "scalemass.fill")
                     Spacer(minLength: 0)
-                    Button { showLog = true } label: {
-                        Label("Log", systemImage: "plus")
-                            .font(Theme.Font.footnote.weight(.semibold))
+                    if appModel.whoopLinked {
+                        syncButton
                     }
-                    .buttonStyle(.bordered)
-                    .tint(Theme.Chart.sleep)
                 }
 
                 if let latest {
@@ -49,28 +52,82 @@ struct WeightTrendCard: View {
                         }
                         .frame(height: 120)
                     } else {
-                        Txt("Log a few more weigh-ins to see your trend.",
+                        Txt("Weigh in a few more times and your trend appears here.",
                             variant: .footnote, color: .labelTertiary)
                     }
+
+                    sourceFooter
                 } else {
                     emptyState
                 }
             }
         }
-        .sheet(isPresented: $showLog) {
-            LogWeightSheet(initialLb: latest ?? appModel.profile.map { Units.kgToLb($0.weightKg) })
+        .task {
+            // Pick up a scale push made since the app was last open.
+            await appModel.syncWeightFromWhoop()
         }
+    }
+
+    private var syncButton: some View {
+        Button {
+            guard !syncing else { return }
+            syncing = true
+            Task {
+                await appModel.syncWeightFromWhoop()
+                syncing = false
+            }
+        } label: {
+            if syncing {
+                ProgressView().controlSize(.small)
+            } else {
+                Label("Sync", systemImage: "arrow.clockwise")
+                    .font(Theme.Font.footnote.weight(.semibold))
+            }
+        }
+        .buttonStyle(.bordered)
+        .tint(Theme.Chart.sleep)
+        .disabled(syncing)
+    }
+
+    /// Names the source, so a number that looks wrong points at where to fix it: WHOOP, not here.
+    private var sourceFooter: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 10))
+            if let synced = appModel.lastWhoopWeightSync {
+                Txt("From WHOOP · \(synced.formatted(date: .omitted, time: .shortened))",
+                    variant: .footnote, color: .labelTertiary)
+            } else {
+                Txt("From WHOOP", variant: .footnote, color: .labelTertiary)
+            }
+        }
+        .foregroundStyle(Theme.Colors.labelTertiary)
     }
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Txt("No weigh-ins yet.", variant: .body, color: .labelSecondary)
-            Button { showLog = true } label: {
-                Label("Log your first weigh-in", systemImage: "plus")
-                    .font(Theme.Font.footnote.weight(.semibold))
+            if appModel.whoopLinked {
+                Txt("Weight comes from WHOOP. Step on your scale, or set it in the WHOOP app, then sync.",
+                    variant: .footnote, color: .labelTertiary)
+                Button {
+                    guard !syncing else { return }
+                    syncing = true
+                    Task {
+                        await appModel.syncWeightFromWhoop()
+                        syncing = false
+                    }
+                } label: {
+                    Label("Sync from WHOOP", systemImage: "arrow.clockwise")
+                        .font(Theme.Font.footnote.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.Chart.sleep)
+                .disabled(syncing)
+            } else {
+                Txt("Connect WHOOP in Settings to track your weight.",
+                    variant: .footnote, color: .labelTertiary)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.Chart.sleep)
         }
     }
 
@@ -87,62 +144,5 @@ struct WeightTrendCard: View {
         .padding(.horizontal, Theme.Spacing.sm)
         .padding(.vertical, 3)
         .background(Capsule().fill(Theme.Colors.fieldBackground))
-    }
-}
-
-struct LogWeightSheet: View {
-    @Environment(AppModel.self) private var appModel
-    @Environment(\.dismiss) private var dismiss
-
-    var initialLb: Double?
-
-    @State private var lbText = ""
-    @State private var bodyFatText = ""
-
-    private var parsedLb: Double? {
-        let v = Double(lbText.trimmingCharacters(in: .whitespaces))
-        guard let v, v >= 20, v <= 1000 else { return nil }
-        return v
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Weight") {
-                    HStack {
-                        TextField("0.0", text: $lbText)
-                            .keyboardType(.decimalPad)
-                        Text("lb").foregroundStyle(Theme.Colors.labelTertiary)
-                    }
-                }
-                Section("Body fat (optional)") {
-                    HStack {
-                        TextField("–", text: $bodyFatText)
-                            .keyboardType(.decimalPad)
-                        Text("%").foregroundStyle(Theme.Colors.labelTertiary)
-                    }
-                }
-            }
-            .navigationTitle("Log weigh-in")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        if let lb = parsedLb {
-                            let bf = Double(bodyFatText.trimmingCharacters(in: .whitespaces))
-                            appModel.logWeight(lb: lb, bodyFatPct: bf)
-                            dismiss()
-                        }
-                    }
-                    .disabled(parsedLb == nil)
-                }
-            }
-            .onAppear {
-                if lbText.isEmpty, let initialLb { lbText = Format.oneDecimal(initialLb) }
-            }
-        }
     }
 }

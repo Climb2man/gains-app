@@ -5,11 +5,14 @@ import SwiftUI
 @Observable
 final class OnboardingModel {
     /// The ordered flow. `welcome` precedes the numbered steps (the progress dots count the rest).
+    /// NOTE: `whoop` comes BEFORE `profile` deliberately. Weight is WHOOP-sourced (a smart scale
+    /// pushes to WHOOP), and the profile step shows it read-only — so the link has to exist first
+    /// or there would be nothing to show. Upstream had profile first, when weight was typed in.
     enum Step: Int, CaseIterable {
-        case welcome, profile, whoop, health, aiKey, goals
+        case welcome, whoop, profile, health, aiKey, goals
 
         /// Steps that show the progress dots / count toward them (everything after the welcome intro).
-        static let dotted: [Step] = [.profile, .whoop, .health, .aiKey, .goals]
+        static let dotted: [Step] = [.whoop, .profile, .health, .aiKey, .goals]
     }
 
     private(set) var step: Step = OnboardingModel.initialStep
@@ -37,7 +40,11 @@ final class OnboardingModel {
     var ageYears = 30
     var feet = 5
     var inches = 10
+    /// Seeded from WHOOP once linked (see `pullBodyFromWhoop`). The 165 default only survives when
+    /// WHOOP holds no weight, so onboarding can still finish rather than dead-ending.
     var weightLb = 165
+    /// True once WHOOP supplied the weight, so the profile step can say where the number came from.
+    private(set) var weightFromWhoop = false
 
     /// Valid once sex is picked and age/height/weight are positive (feet > 0; inches optional).
     /// The full guard holds even if a stepper is dialed to its floor.
@@ -165,7 +172,7 @@ final class OnboardingModel {
         whoopBusy = false
         switch result {
         case .ok:
-            finishWhoopSuccess()
+            await finishWhoopSuccess()
         case let .mfa(handle):
             whoopMfaHandle = handle
         case .failed:
@@ -181,17 +188,35 @@ final class OnboardingModel {
         let ok = await whoop.submitMfa(code: whoopMfaCode.trimmed, handle: handle)
         whoopBusy = false
         if ok {
-            finishWhoopSuccess()
+            await finishWhoopSuccess()
         } else {
             whoopError = "That code didn't work. Check the code and try again."
         }
     }
 
-    private func finishWhoopSuccess() {
+    private func finishWhoopSuccess() async {
         whoopLinked = true
         whoopPassword = ""
         resetWhoopChallenge()
+        await pullBodyFromWhoop()
         advance()
+    }
+
+    /// Adopt WHOOP's stored weight (and height, which arrives in the same call) so the profile step
+    /// can present them read-only. Weight has no manual entry anywhere in the app — WHOOP owns it.
+    ///
+    /// Deliberately leaves the defaults untouched when WHOOP holds nothing, so onboarding can still
+    /// be completed and the goal maths still has an input; the value corrects itself on the first
+    /// successful sync afterwards.
+    private func pullBodyFromWhoop() async {
+        guard let measurement = await whoop.bodyMeasurement() else { return }
+        weightFromWhoop = true
+        weightLb = Int(Units.kgToLb(measurement.weightKg).rounded())
+        if let meters = measurement.heightMeters, meters > 0 {
+            let ftIn = Units.cmToFtIn(meters * 100)
+            feet = ftIn.feet
+            inches = ftIn.inches
+        }
     }
 
     /// Clear any open MFA challenge state (handle + typed code + error).

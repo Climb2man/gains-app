@@ -222,9 +222,24 @@ private struct AboutYouStep: View {
                     HairlineDivider()
                     StepperRow(label: "Height", unit: "in", value: $model.inches, range: 0...11)
                     HairlineDivider()
-                    StepperRow(label: "Weight", unit: "lb", value: $model.weightLb, range: 50...600, step: 1)
+                    // Read-only: WHOOP owns weight (a smart scale pushes to WHOOP). A stepper here
+                    // would be overwritten by the first sync and imply an edit that does not stick.
+                    HStack {
+                        Txt("Weight", variant: .body, color: .labelSecondary)
+                        Spacer(minLength: 0)
+                        Txt("\(model.weightLb) lb", variant: .body, color: .label)
+                    }
                 }
             }
+
+            Txt(
+                model.weightFromWhoop
+                    ? "Weight came from WHOOP. Step on your scale or change it in the WHOOP app and "
+                        + "it updates here automatically."
+                    : "WHOOP has no weight stored yet. Set it in the WHOOP app (or step on your "
+                        + "scale) and Gains picks it up on the next sync.",
+                variant: .footnote, color: .labelTertiary
+            )
         }
     }
 

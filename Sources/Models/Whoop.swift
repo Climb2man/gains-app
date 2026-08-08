@@ -62,6 +62,24 @@ struct WhoopSleepNeed: Codable, Equatable, Sendable {
     var napCreditMinutes: Int?
 }
 
+/// WHOOP's stored body measurement (`/developer/v2/user/measurement/body`). These are the values
+/// WHOOP holds for the account, which is where a connected smart scale's readings land — so this is
+/// the app's weight source now that HealthKit is unavailable on a free Apple ID.
+///
+/// The path is WHOOP's OFFICIAL API schema (`height_meter` / `weight_kilogram` / `max_heart_rate`)
+/// and it answers the app's own token. The private `/users-service/v1/users/{id}/profile` route
+/// carries the same two numbers, but wraps them in the full profile (name, birthday, city, gender)
+/// and needs the numeric `custom:user_id` in the path — more data, more to break. Prefer this one.
+struct WhoopBodyMeasurement: Codable, Equatable, Sendable {
+    /// Body mass in kilograms. Always > 0; the fetch rejects 0 (an empty/secondary WHOOP account
+    /// answers with `weight: 0.0`, which must never be logged as a real weigh-in).
+    var weightKg: Double
+    /// Height in metres, or nil when WHOOP has none.
+    var heightMeters: Double?
+    /// WHOOP's max heart rate (bpm), or nil.
+    var maxHeartRate: Int?
+}
+
 /// One behavior → outcome association WHOOP computed (e.g. "Alcohol · −12%"), restated verbatim.
 /// The app never derives or diagnoses it. Too little data surfaces as `.insufficient` (no number).
 struct WhoopBehaviorImpact: Codable, Equatable, Sendable, Identifiable {

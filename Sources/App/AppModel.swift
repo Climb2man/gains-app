@@ -166,7 +166,36 @@ final class AppModel {
         hasAIKey = aiKeyStore.hasKey
         whoopLinked = await whoop.isLinked()
         await mcpSync.syncIfEnabled()
-        await importHealthWeightHistory()
+        await syncWeightFromWhoop()
+    }
+
+    /// The last time WHOOP's weight was successfully read. Drives the "Synced from WHOOP" label.
+    var lastWhoopWeightSync: Date?
+
+    /// Adopt WHOOP's stored weight. WHOOP is this app's ONLY weight source — a smart scale pushes
+    /// to WHOOP, WHOOP flows here, and there is no manual entry anywhere in the UI.
+    ///
+    /// No-op when unlinked, on the sample container, when WHOOP holds no weight, or when today's
+    /// entry already matches — the last case matters because `logWeight` persists and fires
+    /// `didChange`, which re-pushes the personal-MCP slice.
+    ///
+    /// Trade-off accepted deliberately: WHOOP's private API can break without notice, and with no
+    /// manual fallback the weight trend and goal maths stall until it recovers. The last synced
+    /// value stays on disk, so nothing is lost — it just stops advancing.
+    @discardableResult
+    func syncWeightFromWhoop() async -> Bool {
+        guard !isSampleData, whoopLinked else { return false }
+        guard let measurement = await whoop.bodyMeasurement() else { return false }
+
+        lastWhoopWeightSync = Date()
+
+        let todayKey = FoodLogStore.dayKey(Date())
+        if let latest = weightStore.entries.last, latest.date == todayKey,
+           abs(latest.kg - measurement.weightKg) < 0.005 {
+            return false
+        }
+        logWeight(lb: Units.kgToLb(measurement.weightKg))
+        return true
     }
 
     /// Back-fill the weight trend from Apple Health history (the user's smart-scale weigh-ins). Runs

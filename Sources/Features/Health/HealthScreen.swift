@@ -97,7 +97,10 @@ struct HealthScreen: View {
             if let whoopModel {
                 WhoopLinkSection(model: whoopModel)
             }
-            AppleHealthConnectSection()
+            // AppleHealthConnectSection() removed: HealthKit cannot be provisioned on a free Apple
+            // ID (Gains never appears under iOS Settings → Health → Data Access & Devices), so the
+            // section only ever offered a Connect button that silently did nothing. Weight now
+            // comes from WHOOP. The file and service are kept for a future paid-account build.
             OpenRouterKeySection(hasKey: appModel.hasAIKey)
         }
     }

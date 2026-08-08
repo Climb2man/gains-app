@@ -132,16 +132,23 @@ struct ProfileEditorView: View {
                         )
                     }
 
+                    // Weight is read-only: WHOOP owns it. A smart scale pushes to WHOOP and
+                    // AppModel.syncWeightFromWhoop() adopts the value, so an editable field here
+                    // would just be overwritten on the next sync and mislead about the source.
                     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        FormField(
-                            label: "Weight (lb)",
-                            text: $weightLb,
-                            placeholder: "e.g. 165",
-                            keyboard: .decimalPad
-                        )
+                        HStack {
+                            Txt("Weight", variant: .body, color: .labelSecondary)
+                            Spacer(minLength: 0)
+                            Txt(weightLb.isEmpty ? "—" : "\(weightLb) lb",
+                                variant: .body, color: .label)
+                        }
+                        .padding(.vertical, Theme.Spacing.xs)
+
                         Txt(
-                            "Weight should come from Apple Health (your scale). If you connect it, edits "
-                                + "here may be overwritten by the latest reading.",
+                            appModel.whoopLinked
+                                ? "Weight comes from WHOOP. Change it in the WHOOP app (or step on "
+                                    + "your scale) and it updates here on the next sync."
+                                : "Weight comes from WHOOP. Connect WHOOP to start tracking it.",
                             variant: .footnote, color: .labelTertiary
                         )
                     }
