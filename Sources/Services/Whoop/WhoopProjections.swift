@@ -90,6 +90,21 @@ enum WhoopProjections {
         return sticky["content"]["gauges"].arrayValue.first { $0["title"].stringValue == title }
     }
 
+    /// Project `/developer/v2/user/measurement/body` into the body measurement.
+    ///
+    /// Returns nil unless a positive weight is present. That guard is the important part: a WHOOP
+    /// account with nothing stored — and the secondary account behind `custom:account_id` — answers
+    /// `weight_kilogram: 0.0`, and adopting that would write a 0 lb weigh-in, flatten the trend and
+    /// feed 0 into the BMR/goal maths. Height and max HR are optional and dropped when non-positive.
+    static func projectBodyMeasurement(_ raw: JSONValue) -> WhoopBodyMeasurement? {
+        guard let kg = raw["weight_kilogram"].numberValue, kg > 0 else { return nil }
+        return WhoopBodyMeasurement(
+            weightKg: kg,
+            heightMeters: raw["height_meter"].numberValue.flatMap { $0 > 0 ? $0 : nil },
+            maxHeartRate: raw["max_heart_rate"].numberValue.flatMap { $0 > 0 ? Int($0) : nil }
+        )
+    }
+
     /// Project the /home aggregate into the dashboard summary. The sticky gauges carry the three
     /// pillar scores + the recovery fill style; the contributors/vitals come from whatever
     /// CONTRIBUTORS_TILE the home payload also inlines (Whoop has been migrating these into /home),

@@ -437,14 +437,12 @@ actor WhoopClient: WhoopService {
         }
         let result = await authedGet(Self.bodyMeasurementPath, query: [:])
         guard result.status == 200, let body = result.body,
-              let kg = body["weight_kilogram"].numberValue, kg > 0
-        else { return bodyMeasurementCache?.value }
-
-        let model = WhoopBodyMeasurement(
-            weightKg: kg,
-            heightMeters: body["height_meter"].numberValue.flatMap { $0 > 0 ? $0 : nil },
-            maxHeartRate: body["max_heart_rate"].numberValue.flatMap { $0 > 0 ? Int($0) : nil }
-        )
+              let model = WhoopProjections.projectBodyMeasurement(body)
+        else {
+            // Keep serving the last good value on a transient failure rather than blanking the
+            // weight: WHOOP is the only source, so a dropped request must not look like "no data".
+            return bodyMeasurementCache?.value
+        }
         bodyMeasurementCache = BodyMeasurementCacheEntry(fetchedAt: now, value: model)
         return model
     }

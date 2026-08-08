@@ -10,6 +10,51 @@ on:
     branches: [main]
 
 jobs:
+  # Unit tests run on a simulator BEFORE the device build is worth trusting. Only GainsTests:
+  # GainsUITests drives real gestures and is slow/flaky in CI, and is not what we are guarding here.
+  test:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select newest installed Xcode
+        run: |
+          set -euo pipefail
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Gains.xcodeproj
+        run: xcodegen generate
+
+      - name: Run unit tests
+        # The simulator UDID is resolved at run time: hard-coding a device name breaks whenever the
+        # runner image ships a new iPhone generation.
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available --json | python3 -c "
+          import json,sys
+          for runtime, devices in json.load(sys.stdin)['devices'].items():
+              if 'iOS' not in runtime:
+                  continue
+              for d in devices:
+                  if d.get('isAvailable') and 'iPhone' in d['name']:
+                      print(d['udid']); sys.exit(0)
+          sys.exit('no iPhone simulator available')
+          ")
+          echo "Using simulator $UDID"
+          xcodebuild test \
+            -project Gains.xcodeproj \
+            -scheme Gains \
+            -only-testing:GainsTests \
+            -destination "id=$UDID" \
+            CODE_SIGNING_ALLOWED=NO
+
   build:
     # macos-26, NOT macos-15. Sources/DesignSystem/Theme.swift calls `glassEffect(...)` and extends
     # `Glass` (Liquid Glass), which are iOS 26 SDK symbols. They are correctly guarded at runtime with

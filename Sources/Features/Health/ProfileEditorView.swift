@@ -12,7 +12,6 @@ struct ProfileEditorView: View {
     @State private var age: String
     @State private var feet: String
     @State private var inches: String
-    @State private var weightLb: String
     @State private var saved = false
 
     init(profile: Profile) {
@@ -23,7 +22,6 @@ struct ProfileEditorView: View {
         _age = State(initialValue: String(profile.ageYears))
         _feet = State(initialValue: String(ftIn.feet))
         _inches = State(initialValue: String(ftIn.inches))
-        _weightLb = State(initialValue: Units.formatLb(profile.weightKg))
     }
 
     /// Trimmed name to save, capped at 60 chars; empty becomes nil.
@@ -32,16 +30,20 @@ struct ProfileEditorView: View {
         return trimmed.isEmpty ? nil : String(trimmed.prefix(60))
     }
 
+    /// Weight is WHOOP-owned and read-only in this editor, so it must be read from the LIVE profile
+    /// and never from a value snapshotted when the editor opened. Without this, a WHOOP sync landing
+    /// while the editor is open would be silently reverted the moment the user saved an unrelated
+    /// field (name, age, height).
+    private var liveWeightKg: Double { appModel.profile?.weightKg ?? profile.weightKg }
+
     private var basicValid: Bool {
-        sex != nil && (Int(age) ?? 0) > 0 && (Int(feet) ?? 0) > 0 && (Double(weightLb) ?? 0) > 0
+        sex != nil && (Int(age) ?? 0) > 0 && (Int(feet) ?? 0) > 0
     }
 
     /// Candidate Profile from the current inputs (metric), or nil until the basics are valid.
     /// Read by both the live BMR preview and the "changed" check.
     private var candidate: Profile? {
-        guard basicValid, let sex,
-              let ageYears = Int(age), let feetVal = Double(feet),
-              let weightVal = Double(weightLb)
+        guard basicValid, let sex, let ageYears = Int(age), let feetVal = Double(feet)
         else { return nil }
         let inchesVal = Double(inches) ?? 0
         return Profile(
@@ -49,18 +51,19 @@ struct ProfileEditorView: View {
             sex: sex,
             ageYears: ageYears,
             heightCm: Units.ftInToCm(feet: feetVal, inches: inchesVal).rounded(),
-            weightKg: (Units.lbToKg(weightVal) * 10).rounded() / 10,
+            weightKg: liveWeightKg,
             createdAt: profile.createdAt
         )
     }
 
+    /// Weight is intentionally absent from this comparison: it cannot be edited here, and including
+    /// it would light up the Save button purely because WHOOP synced a new value in the background.
     private var changed: Bool {
         guard let candidate else { return false }
         return candidate.name != profile.name
             || candidate.sex != profile.sex
             || candidate.ageYears != profile.ageYears
             || candidate.heightCm != profile.heightCm
-            || candidate.weightKg != profile.weightKg
     }
 
     private var bmrText: String {
@@ -139,7 +142,7 @@ struct ProfileEditorView: View {
                         HStack {
                             Txt("Weight", variant: .body, color: .labelSecondary)
                             Spacer(minLength: 0)
-                            Txt(weightLb.isEmpty ? "—" : "\(weightLb) lb",
+                            Txt(liveWeightKg > 0 ? "\(Units.formatLb(liveWeightKg)) lb" : "—",
                                 variant: .body, color: .label)
                         }
                         .padding(.vertical, Theme.Spacing.xs)
@@ -183,8 +186,9 @@ struct ProfileEditorView: View {
     }
 
     /// Changes whenever any editable field does, so one `onChange` can clear the "saved" confirmation.
+    /// Weight is excluded: it is not editable here, so a WHOOP sync must not clear the confirmation.
     private var editSignature: String {
-        "\(name)|\(sex?.rawValue ?? "")|\(age)|\(feet)|\(inches)|\(weightLb)"
+        "\(name)|\(sex?.rawValue ?? "")|\(age)|\(feet)|\(inches)"
     }
 
     private func save() {
