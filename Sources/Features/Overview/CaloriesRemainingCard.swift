@@ -14,8 +14,6 @@ struct CaloriesRemainingCard: View {
     let goals: Goals
     /// Header label; carries the day when Overview is scoped to a past date.
     var title: String = "CALORIES LEFT"
-    /// Deep-link into the Calories tab.
-    var onPress: (() -> Void)?
 
     private var eaten: Double { totals.calories }
     private var goal: Double { goals.calorieGoal }
@@ -42,7 +40,6 @@ struct CaloriesRemainingCard: View {
                 }
             }
         }
-        .onTapGesture { onPress?() }
     }
 
     private var ring: some View {

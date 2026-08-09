@@ -111,8 +111,12 @@ enum Theme {
 
         /// Net-energy slider: deficit (red) → balanced (white) → surplus (blue). This data gradient is
         /// the only place chrome blue is allowed.
+        /// The midpoint used to be `surface`, which was white on the old light theme and read as
+        /// "balanced". On the dark theme `surface` is near-black, so the middle of the scale became
+        /// a dead notch between two vivid ends — the one place where centre means "on target". A
+        /// light neutral restores it.
         static let netEnergyGradient = LinearGradient(
-            colors: [Theme.Colors.danger, Theme.Colors.surface, Theme.Colors.tint],
+            colors: [Theme.Colors.danger, Theme.Colors.labelSecondary, Theme.Colors.tint],
             startPoint: .leading, endPoint: .trailing
         )
 
