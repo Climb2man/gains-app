@@ -140,12 +140,9 @@ final class OnboardingModel {
         self.aiKeyStore = aiKeyStore
         self.health = health
         healthAvailable = health.isAvailable()
-        let d = Goals.default
-        calorieGoal = Int(d.calorieGoal)
-        proteinGoal = Int(d.proteinGoal)
-        fatGoal = Int(d.fatGoal)
-        carbGoal = Int(d.carbGoal)
-        stepsGoal = d.stepsGoal
+        // Only the step target needs a starting value now. Calories and macros are derived from the
+        // goal + activity choice, so seeding them would just be a number the user never chose.
+        stepsGoal = Goals.default.stepsGoal
     }
 
     /// Advance one step. No-op past the end.
