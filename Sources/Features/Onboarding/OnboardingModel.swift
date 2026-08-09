@@ -77,35 +77,58 @@ final class OnboardingModel {
     var aiKeyDraft = ""
     private(set) var aiKeySaved = false
 
-    var calorieGoal = 0
-    var proteinGoal = 0
-    var fatGoal = 0
-    var carbGoal = 0
-    /// Daily step target, a first-class goal alongside the macros. Whole steps, so Int.
+    /// The two goal inputs. Calories and macros are DERIVED from these plus the WHOOP-sourced
+    /// profile — there is no manual calorie or macro entry anywhere in the app.
+    var goalDirection: GoalCalculator.GoalDirection?
+    var activityLevel: GoalCalculator.ActivityLevel?
+    /// 7-day mean WHOOP day-strain, loaded once the account links. Advisory only.
+    private(set) var avgDayStrain: Double?
+
+    /// The activity band WHOOP's recent strain points at, or nil when there is no strain yet.
+    var suggestedActivity: GoalCalculator.ActivityLevel? {
+        avgDayStrain.map(GoalCalculator.suggestedActivity(avgDayStrain:))
+    }
+
+    /// The computed targets, or nil until both choices are made and the profile is valid.
+    var goalEstimate: GoalCalculator.Result? {
+        guard let profile = buildProfile(), let goalDirection, let activityLevel else { return nil }
+        return GoalCalculator.estimate(profile: profile, activity: activityLevel, goal: goalDirection)
+    }
+
+    /// Daily step target: the one goal still set by hand, since it is not part of the calorie model
+    /// and WHOOP exposes no step goal to read.
     var stepsGoal = 0
 
     /// Calorie-estimation bias picked in the goals step (defaults balanced). Persisted to
     /// `FoodLogSettingsStore` on finish.
     var calorieBias: CalorieBias = .balanced
 
-    /// All goal values must be valid (calories + steps positive ints; macros non-negative ints).
-    var goalsValid: Bool {
-        guard calorieGoal > 0 else { return false }
-        guard proteinGoal >= 0, fatGoal >= 0, carbGoal >= 0 else { return false }
-        guard stepsGoal > 0 else { return false }
-        return true
-    }
+    /// Valid once a goal and an activity level are chosen (which is what produces `goalEstimate`)
+    /// and a step target is set.
+    var goalsValid: Bool { goalEstimate != nil && stepsGoal > 0 }
 
-    /// The goals as a model, or `nil` when invalid.
+    /// The goals as a model, or `nil` when invalid. Every macro is derived, never typed.
     var goals: Goals? {
-        guard goalsValid else { return nil }
+        guard let estimate = goalEstimate, stepsGoal > 0 else { return nil }
         return Goals(
-            calorieGoal: Double(calorieGoal),
-            proteinGoal: Double(proteinGoal),
-            fatGoal: Double(fatGoal),
-            carbGoal: Double(carbGoal),
+            calorieGoal: Double(estimate.calorieGoal),
+            proteinGoal: Double(estimate.proteinGoal),
+            fatGoal: Double(estimate.fatGoal),
+            carbGoal: Double(estimate.carbGoal),
             stepsGoal: stepsGoal
         )
+    }
+
+    /// The recipe to persist so the weekly refresh can re-derive these targets later.
+    var goalRecipe: GoalRecipe? {
+        guard let estimate = goalEstimate else { return nil }
+        return GoalRecipe(activity: estimate.activity.rawValue, direction: estimate.goal.rawValue)
+    }
+
+    /// Load the strain average used to suggest an activity band. Called after WHOOP links.
+    func loadStrainSuggestion() async {
+        let points = await whoop.history(metric: .strain, days: 7).compactMap(\.value)
+        avgDayStrain = points.isEmpty ? nil : points.reduce(0, +) / Double(points.count)
     }
 
     private let whoop: any WhoopService
@@ -199,6 +222,7 @@ final class OnboardingModel {
         whoopPassword = ""
         resetWhoopChallenge()
         await pullBodyFromWhoop()
+        await loadStrainSuggestion()
         advance()
     }
 
@@ -251,14 +275,6 @@ final class OnboardingModel {
         advance()
     }
 
-    /// Apply a calculator estimate to the four goal fields. The user still edits and confirms
-    /// (never silent-write).
-    func applyEstimate(_ result: GoalCalculator.Result) {
-        calorieGoal = result.calorieGoal
-        proteinGoal = result.proteinGoal
-        fatGoal = result.fatGoal
-        carbGoal = result.carbGoal
-    }
 }
 
 private extension String {

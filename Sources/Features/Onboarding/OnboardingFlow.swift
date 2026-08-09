@@ -192,6 +192,10 @@ struct OnboardingFlow: View {
             onComplete(profile, goals)
         } else {
             appModel.nutritionStore.setGoals(goals)
+            // Persist the goal + activity choice so the weekly Monday refresh can re-derive these
+            // targets from the trailing 7-day average weight. Without the recipe the numbers would
+            // be frozen at whatever today's weight happened to be.
+            appModel.nutritionStore.setGoalRecipe(model.goalRecipe, autoAdjust: true)
             appModel.foodLogSettings.setBias(model.calorieBias)
             appModel.completeOnboarding(profile)
             Task { await appModel.refreshLinks() }
@@ -430,67 +434,83 @@ private struct AIKeyStep: View {
 
 private struct GoalsStep: View {
     @Bindable var model: OnboardingModel
-    /// Profile from the about-you step, driving the "Help me" calculator. `nil` if that step is
-    /// incomplete.
+    /// Kept for call-site compatibility. The step no longer needs it: targets are derived inside
+    /// `model.goalEstimate`, which builds its own profile from the WHOOP-sourced values.
     let profile: Profile?
-
-    @State private var showCalculator = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            HStack {
-                Txt("Your goals", variant: .title1)
-                Spacer(minLength: 0)
-                AppButton(title: "Help me", icon: "sparkles", kind: .tertiary) { showCalculator = true }
-                    .fixedSize()
-                    .accessibilityLabel("Help me set my goal")
-            }
+            Txt("Your goals", variant: .title1)
 
             Txt(
-                "Set your daily targets. Tap the sparkles for an estimate, then edit anything and finish.",
+                "Pick what you're doing and how much you train. Your calories and macros are worked "
+                    + "out from those and your WHOOP profile.",
                 variant: .body, color: .labelSecondary
             )
 
+            // GOAL — cut / maintain / lean bulk.
             SurfaceCard {
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    HStack {
-                        Txt("Daily calories", variant: .bodyEmphasized)
-                        Spacer(minLength: 0)
-                        Txt("your headline target", variant: .footnote, color: .labelTertiary)
+                VStack(alignment: .leading, spacing: 0) {
+                    Txt("GOAL", variant: .sectionHeader, color: .labelSecondary)
+                        .padding(.bottom, Theme.Spacing.sm)
+                    ForEach(GoalCalculator.GoalDirection.allCases) { option in
+                        OnboardingChoiceRow(
+                            title: option.label,
+                            subtitle: option.description,
+                            selected: model.goalDirection == option,
+                            badge: nil
+                        ) { model.goalDirection = option }
+                        if option != GoalCalculator.GoalDirection.allCases.last { HairlineDivider() }
                     }
-                    HStack {
-                        Spacer(minLength: 0)
-                        NumberStepper(value: $model.calorieGoal, range: 0...6000, step: 50, unit: "kcal")
-                            .contentTransition(.numericText())
-                        Spacer(minLength: 0)
-                    }
-                    MacroSplitBar(
-                        proteinG: model.proteinGoal,
-                        fatG: model.fatGoal,
-                        carbsG: model.carbGoal
-                    )
                 }
             }
 
+            // ACTIVITY — hours/week bands, with WHOOP's recent strain suggesting one.
             SurfaceCard {
-                VStack(spacing: Theme.Spacing.lg) {
-                    MacroStepperRow(
-                        title: "Protein", color: Theme.Chart.protein,
-                        why: "Builds and preserves muscle; the most satiating macro.",
-                        value: $model.proteinGoal
-                    )
-                    HairlineDivider()
-                    MacroStepperRow(
-                        title: "Fat", color: Theme.Chart.fat,
-                        why: "Supports hormones and absorbs vitamins.",
-                        value: $model.fatGoal
-                    )
-                    HairlineDivider()
-                    MacroStepperRow(
-                        title: "Carbs", color: Theme.Chart.carbs,
-                        why: "Your main fuel for training and daily energy.",
-                        value: $model.carbGoal
-                    )
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Txt("ACTIVITY", variant: .sectionHeader, color: .labelSecondary)
+                        Spacer(minLength: 0)
+                        if let strain = model.avgDayStrain {
+                            Txt("WHOOP 7-day strain \(Format.oneDecimal(strain))",
+                                variant: .footnote, color: .labelTertiary)
+                        }
+                    }
+                    .padding(.bottom, Theme.Spacing.sm)
+                    ForEach(GoalCalculator.ActivityLevel.allCases) { option in
+                        OnboardingChoiceRow(
+                            title: option.label,
+                            subtitle: "\(option.hoursPerWeek) · \(option.description)",
+                            selected: model.activityLevel == option,
+                            badge: model.suggestedActivity == option ? "WHOOP suggests" : nil
+                        ) { model.activityLevel = option }
+                        if option != GoalCalculator.ActivityLevel.allCases.last { HairlineDivider() }
+                    }
+                }
+            }
+
+            // The derived targets, shown so the choice above has visible consequences.
+            if let estimate = model.goalEstimate {
+                SurfaceCard {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+                            Text("\(estimate.calorieGoal)")
+                                .font(Theme.Font.statNumber)
+                                .foregroundStyle(Theme.Colors.label)
+                            Txt("kcal/day", variant: .footnote, color: .labelTertiary)
+                            Spacer(minLength: 0)
+                            Txt("maintenance \(estimate.tdee)",
+                                variant: .footnote, color: .labelTertiary)
+                        }
+                        MacroSplitBar(
+                            proteinG: estimate.proteinGoal,
+                            fatG: estimate.fatGoal,
+                            carbsG: estimate.carbGoal
+                        )
+                        Txt("\(estimate.proteinGoal) g protein · \(estimate.carbGoal) g carbs · "
+                            + "\(estimate.fatGoal) g fat",
+                            variant: .footnote, color: .labelTertiary)
+                    }
                 }
             }
 
@@ -508,16 +528,47 @@ private struct GoalsStep: View {
             CalorieBiasCard(selection: $model.calorieBias)
 
             Txt(
-                "Goals are targets you set.",
+                "Targets refresh every Monday from your 7-day average weight.",
                 variant: .footnote, color: .labelTertiary, center: true
             )
         }
-        .sheet(isPresented: $showCalculator) {
-            GoalCalculatorSheet(profile: profile) { result in
-                model.applyEstimate(result)
-                showCalculator = false
+    }
+}
+
+/// A selectable row in the onboarding goal/activity lists. The whole row is the hit target, and
+/// selection reads as a checkmark rather than colour alone.
+private struct OnboardingChoiceRow: View {
+    let title: String
+    let subtitle: String
+    let selected: Bool
+    let badge: String?
+    let tap: () -> Void
+
+    var body: some View {
+        Button(action: tap) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Txt(title, variant: .bodyEmphasized)
+                        if let badge {
+                            Txt(badge, variant: .footnote, color: .tint)
+                                .padding(.horizontal, Theme.Spacing.sm)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Theme.Colors.fieldBackground))
+                        }
+                    }
+                    Txt(subtitle, variant: .footnote, color: .labelTertiary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(selected ? Theme.Colors.tint : Theme.Colors.labelTertiary)
             }
+            .contentShape(Rectangle())
+            .padding(.vertical, Theme.Spacing.sm)
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }
 
