@@ -50,6 +50,42 @@ final class FoodLogViewModel {
     var shortcuts: [FoodShortcut] { Array(savedFoods.shortcuts.prefix(8)) }
     /// Recently-used meals derived from the journal, for one-tap re-log.
     var recents: [RecentMeal] { Array(nutrition.recentMeals.prefix(6)) }
+
+    /// Foods the user has eaten before, for the "close your rings" suggestions.
+    ///
+    /// Saved meals come first and win ties on de-duplication: a saved meal is something the user
+    /// deliberately kept, where a recent is merely something that happened. De-duped on the same
+    /// normalised name the rest of the app uses, so "Greek yoghurt" and "greek yogurt " collapse.
+    var suggestionCandidates: [MacroGapRecommender.Candidate] {
+        var seen = Set<String>()
+        var out: [MacroGapRecommender.Candidate] = []
+
+        for meal in nutrition.savedMeals {
+            let key = NutritionStore.normalizeName(meal.name)
+            guard seen.insert(key).inserted else { continue }
+            out.append(.init(id: "saved:\(meal.id)", name: meal.name, calories: meal.calories,
+                             proteinG: meal.proteinG, carbsG: meal.carbsG, fatG: meal.fatG))
+        }
+        for recent in nutrition.recentMeals {
+            let key = NutritionStore.normalizeName(recent.name)
+            guard seen.insert(key).inserted else { continue }
+            out.append(.init(id: "recent:\(key)", name: recent.name, calories: recent.calories,
+                             proteinG: recent.proteinG, carbsG: recent.carbsG, fatG: recent.fatG))
+        }
+        return out
+    }
+
+    /// Log a suggestion into today. Routes through `logRecent` so it takes the same path as any
+    /// other re-log — including the lookup that recovers the original resolved item.
+    func logSuggestion(_ candidate: MacroGapRecommender.Candidate) {
+        logRecent(RecentMeal(
+            name: candidate.name,
+            calories: candidate.calories,
+            proteinG: candidate.proteinG,
+            carbsG: candidate.carbsG,
+            fatG: candidate.fatG
+        ))
+    }
     /// Nickname autocomplete matches for the current composer text.
     var suggestions: [FoodShortcut] { savedFoods.autocomplete(composerText) }
 

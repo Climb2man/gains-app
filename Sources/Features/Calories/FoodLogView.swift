@@ -223,6 +223,12 @@ struct FoodLogView: View {
                     goals: model.goals,
                     onOpenDetail: { onOpenDetail?() }
                 )
+                CloseYourRingsCard(
+                    totals: model.totals,
+                    goals: model.goals,
+                    candidates: model.suggestionCandidates,
+                    onLog: { model.logSuggestion($0) }
+                )
                 activityStrip
                 weeklyTrendsCard
                 foodQualityView

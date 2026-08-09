@@ -87,39 +87,61 @@ struct CalorieOverviewHeader: View {
     }
     private var hasMacros: Bool { macroCals > 0 }
 
+    /// Three rings, one per macro, each filled to its share of that macro's GOAL.
+    ///
+    /// This replaced a donut of the macro split. The donut answered "what proportion of what I ate
+    /// was protein" — a question nobody asks mid-afternoon. These answer "how much of today's
+    /// protein have I got in", which is the one that decides what to eat next, and it matches the
+    /// mental model of closing rings.
     private var macrosCard: some View {
         Card(metricAccent: Theme.Chart.protein) {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 Text("MACROS")
                     .font(Theme.Font.footnote.weight(.semibold)).tracking(0.5)
                     .foregroundStyle(Theme.Colors.labelTertiary)
-                HStack(spacing: Theme.Spacing.xl) {
-                    ZStack {
-                        DonutChart(
-                            segments: [
-                                DonutSegment(value: totals.proteinG * kcalPerProteinG, color: Theme.Chart.protein, label: "Protein"),
-                                DonutSegment(value: totals.carbsG * kcalPerCarbG, color: Theme.Chart.carbs, label: "Carbs"),
-                                DonutSegment(value: totals.fatG * kcalPerFatG, color: Theme.Chart.fat, label: "Fat"),
-                            ],
-                            size: 128, strokeWidth: 16
-                        )
-                        VStack(spacing: 2) {
-                            Text(hasMacros ? Format.int(macroCals) : "–")
-                                .font(Theme.Font.statNumber).monospacedDigit()
-                                .foregroundStyle(Theme.Colors.label)
-                            Text(hasMacros ? "kcal" : "no food yet")
-                                .font(Theme.Font.footnote)
-                                .foregroundStyle(Theme.Colors.labelSecondary)
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                        macroLegendRow("Protein", totals.proteinG, kcalPerProteinG, Theme.Chart.protein)
-                        macroLegendRow("Carbs", totals.carbsG, kcalPerCarbG, Theme.Chart.carbs)
-                        macroLegendRow("Fat", totals.fatG, kcalPerFatG, Theme.Chart.fat)
-                    }
+                HStack(spacing: Theme.Spacing.md) {
+                    macroRing("Protein", totals.proteinG, goals.proteinGoal, Theme.Chart.protein)
+                    macroRing("Carbs", totals.carbsG, goals.carbGoal, Theme.Chart.carbs)
+                    macroRing("Fat", totals.fatG, goals.fatGoal, Theme.Chart.fat)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
+    }
+
+    /// One macro ring. Fill clamps at 1 so passing the goal does not wind the arc round again; the
+    /// percentage underneath keeps counting so going over is still visible.
+    private func macroRing(_ label: String, _ eatenG: Double, _ goalG: Double, _ color: Color)
+        -> some View {
+        let pct = goalG > 0 ? eatenG / goalG : 0
+        let over = goalG > 0 && eatenG > goalG
+        return VStack(spacing: Theme.Spacing.sm) {
+            RingChart(progress: min(1, pct), size: 92, strokeWidth: 10,
+                      color: over ? Theme.Colors.warning : color, glow: false) {
+                VStack(spacing: 0) {
+                    Text(goalG > 0 ? "\(Int((pct * 100).rounded()))%" : "–")
+                        .font(Theme.Font.number(size: 19, weight: .bold))
+                        .foregroundStyle(Theme.Colors.label)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                    Text("\(Format.int(eatenG))/\(Format.int(goalG))")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.Colors.labelTertiary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+            Text(label)
+                .font(Theme.Font.footnote.weight(.medium))
+                .foregroundStyle(Theme.Colors.labelSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement()
+        .accessibilityLabel(
+            "\(label) \(Format.int(eatenG)) of \(Format.int(goalG)) grams, "
+                + "\(Int((pct * 100).rounded())) percent"
+        )
     }
 
     private func macroLegendRow(_ label: String, _ grams: Double, _ kcalPerG: Double, _ color: Color) -> some View {
