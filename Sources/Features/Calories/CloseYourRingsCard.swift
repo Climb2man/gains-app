@@ -14,12 +14,18 @@ struct CloseYourRingsCard: View {
     /// Log the chosen food straight into today.
     var onLog: ((MacroGapRecommender.Candidate) -> Void)?
 
+    /// Routed through the shared helper rather than subtracting inline, so this and the Overview
+    /// side cannot drift apart. `FoodDayTotals` carries extras (sugar, fibre, sodium, water) the
+    /// recommender has no opinion on, so only the four it uses are mapped across.
     private var gap: MacroGapRecommender.Gap {
-        MacroGapRecommender.Gap(
-            calories: goals.calorieGoal - totals.calories,
-            proteinG: goals.proteinGoal - totals.proteinG,
-            carbsG: goals.carbGoal - totals.carbsG,
-            fatG: goals.fatGoal - totals.fatG
+        MacroGapRecommender.gap(
+            goals: goals,
+            totals: DailyTotals(
+                calories: totals.calories,
+                proteinG: totals.proteinG,
+                carbsG: totals.carbsG,
+                fatG: totals.fatG
+            )
         )
     }
 
@@ -44,7 +50,7 @@ struct CloseYourRingsCard: View {
                         variant: .footnote, color: .labelTertiary)
                 } else if suggestions.isEmpty {
                     Txt("Nothing you've logged before fits what's left "
-                        + "(\(Format.int(max(0, gap.calories))) kcal).",
+                        + "(\(Format.int(max(0, gap.calories))) calories).",
                         variant: .footnote, color: .labelTertiary)
                 } else {
                     remainingLine
@@ -60,10 +66,10 @@ struct CloseYourRingsCard: View {
     /// States the gap the suggestions are trying to close, so the list has visible reasoning behind
     /// it rather than appearing to be arbitrary picks.
     private var remainingLine: some View {
-        Txt("Left today: \(Format.int(max(0, gap.calories))) kcal · "
-            + "\(Format.int(max(0, gap.proteinG))) g protein · "
-            + "\(Format.int(max(0, gap.carbsG))) g carbs · "
-            + "\(Format.int(max(0, gap.fatG))) g fat",
+        Txt("Left today: \(Format.int(max(0, gap.calories))) calories · "
+            + "\(Format.int(max(0, gap.proteinG))) grams protein · "
+            + "\(Format.int(max(0, gap.carbsG))) grams carbs · "
+            + "\(Format.int(max(0, gap.fatG))) grams fat",
             variant: .footnote, color: .labelTertiary)
     }
 
@@ -78,8 +84,10 @@ struct CloseYourRingsCard: View {
                             Txt("goes over", variant: .footnote, color: .warning)
                         }
                     }
-                    Txt("\(Format.int(c.calories)) kcal · \(Format.int(c.proteinG))P "
-                        + "\(Format.int(c.carbsG))C \(Format.int(c.fatG))F",
+                    Txt("\(Format.int(c.calories)) calories", variant: .footnote, color: .labelTertiary)
+                    Txt("\(Format.int(c.proteinG)) grams protein · "
+                        + "\(Format.int(c.carbsG)) grams carbs · "
+                        + "\(Format.int(c.fatG)) grams fat",
                         variant: .footnote, color: .labelTertiary)
                 }
                 Spacer(minLength: 0)

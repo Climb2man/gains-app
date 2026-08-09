@@ -223,12 +223,19 @@ struct FoodLogView: View {
                     goals: model.goals,
                     onOpenDetail: { onOpenDetail?() }
                 )
-                CloseYourRingsCard(
-                    totals: model.totals,
-                    goals: model.goals,
-                    candidates: model.suggestionCandidates,
-                    onLog: { model.logSuggestion($0) }
-                )
+                // Today only. The Calories tab can scroll back through past days, and logging a
+                // suggestion routes through logRecent, which calls goToToday() — so on a past day
+                // the card would compute its gap from THAT day and then silently log the food
+                // against today. Suggesting what to eat for a day that has already finished is
+                // meaningless regardless.
+                if model.isToday {
+                    CloseYourRingsCard(
+                        totals: model.totals,
+                        goals: model.goals,
+                        candidates: model.suggestionCandidates,
+                        onLog: { model.logSuggestion($0) }
+                    )
+                }
                 activityStrip
                 weeklyTrendsCard
                 foodQualityView

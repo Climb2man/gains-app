@@ -42,7 +42,7 @@ struct CalorieOverviewHeader: View {
                     .contentTransition(.numericText())
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                Text("kcal vs your goal")
+                Text("calories vs your goal")
                     .font(.system(size: 10))
                     .foregroundStyle(Theme.Colors.labelTertiary)
                 Text("\(Format.int(eaten)) / \(Format.int(goals.calorieGoal))")
@@ -112,14 +112,14 @@ struct CalorieOverviewHeader: View {
                         .font(Theme.Font.bodyEmphasized)
                         .foregroundStyle(Theme.Colors.label)
                 }
-                Text("\(Format.int(eatenG)) / \(Format.int(goalG)) g")
+                Text("\(Format.int(eatenG)) / \(Format.int(goalG)) grams")
                     .font(Theme.Font.statNumber)
                     .foregroundStyle(Theme.Colors.labelSecondary)
                     .monospacedDigit()
                 if goalG > 0 {
                     Text(over
-                        ? "\(Format.int(eatenG - goalG)) g over"
-                        : "\(Format.int(goalG - eatenG)) g to go")
+                        ? "\(Format.int(eatenG - goalG)) grams over"
+                        : "\(Format.int(goalG - eatenG)) grams to go")
                         .font(Theme.Font.footnote)
                         .foregroundStyle(over ? Theme.Colors.warning : Theme.Colors.labelTertiary)
                 }
