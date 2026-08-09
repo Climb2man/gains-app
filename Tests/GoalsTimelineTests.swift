@@ -26,6 +26,36 @@ final class GoalsTimelineTests: XCTestCase {
         createdAt: "2026-06-01T00:00:00.000Z"
     )
 
+    /// The weekly refresh passes a trailing 7-day mean weight; the daily paths pass nothing. If
+    /// `smoothedWeightKg` were ignored, both would produce the same numbers and the smoothing would
+    /// be decorative.
+    func testAutoAdjustHonoursTheSmoothedWeight() {
+        let store = NutritionStore(store: isolatedStore("smoothed"))
+        store.setGoalRecipe(GoalRecipe(activity: "moderate", direction: "cut"), autoAdjust: true)
+
+        store.autoAdjustGoals(profile: baseProfile)
+        let fromProfileWeight = store.goals.calorieGoal
+
+        // 5 kg lighter as a 7-day mean must yield a lower target than today's reading alone.
+        store.autoAdjustGoals(profile: baseProfile, smoothedWeightKg: baseProfile.weightKg - 5)
+        let fromSmoothed = store.goals.calorieGoal
+
+        XCTAssertNotEqual(fromProfileWeight, fromSmoothed,
+                          "smoothedWeightKg was ignored — the weekly refresh would be a no-op")
+        XCTAssertLessThan(fromSmoothed, fromProfileWeight)
+    }
+
+    /// A recipe written by the previous goal model stores directions like "lose1". Those must not
+    /// resolve, so the user's existing targets survive untouched until they pick a new goal.
+    func testLegacyRecipeDirectionLeavesGoalsAlone() {
+        let store = NutritionStore(store: isolatedStore("legacy-recipe"))
+        let before = store.goals
+        store.setGoalRecipe(GoalRecipe(activity: "moderate", direction: "lose1"), autoAdjust: true)
+        store.autoAdjustGoals(profile: baseProfile)
+        XCTAssertEqual(store.goals, before,
+                       "an unresolvable legacy direction must be a strict no-op, not a reset")
+    }
+
     func testLegacyGoalsCoverAllHistory() {
         let kv = isolatedStore("legacy")
         kv.setValue(Goals(calorieGoal: 1800, proteinGoal: 120, fatGoal: 60, carbGoal: 180, stepsGoal: 8000),

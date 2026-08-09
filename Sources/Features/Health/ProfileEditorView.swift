@@ -193,7 +193,8 @@ struct ProfileEditorView: View {
 
     private func save() {
         guard let candidate, changed else { return }
-        appModel.updateProfile(candidate)
+        // Explicit user edit (age / height / sex), so recompute now rather than waiting for Monday.
+        appModel.updateProfile(candidate, recomputeGoals: true)
         saved = true
     }
 }

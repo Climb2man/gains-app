@@ -254,14 +254,14 @@ final class AppModel {
     /// the existing targets stand until a goal is picked afresh.
     @discardableResult
     func refreshWeeklyGoalsIfDue(now: Date = Date()) -> Bool {
-        guard !isSampleData, profile != nil, nutritionStore.goalRecipe != nil else { return false }
+        guard !isSampleData, let profile, nutritionStore.goalRecipe != nil else { return false }
         let week = Self.isoWeekKey(now)
         guard UserDefaults.standard.string(forKey: Self.weeklyGoalRefreshKey) != week else {
             return false
         }
         UserDefaults.standard.set(week, forKey: Self.weeklyGoalRefreshKey)
         nutritionStore.autoAdjustGoals(
-            profile: profile!,
+            profile: profile,
             smoothedWeightKg: weightStore.averageKg(days: 7)
         )
         return true
@@ -297,10 +297,24 @@ final class AppModel {
     }
 
     /// Replace the in-memory profile after an edit elsewhere (keeps the gate's copy in sync).
-    func updateProfile(_ profile: Profile) {
+    /// Replace the in-memory profile after an edit elsewhere (keeps the gate's copy in sync).
+    ///
+    /// `recomputeGoals` defaults to FALSE, which is the important part. This used to recompute
+    /// unconditionally, and since `logWeight` calls it on every WHOOP weight sync, calorie and macro
+    /// targets were being rebuilt daily from that morning's raw scale reading — bypassing the weekly
+    /// refresh entirely and reintroducing exactly the day-to-day drift it exists to prevent.
+    ///
+    /// Automatic paths (weight sync, WHOOP profile sync) therefore leave the targets alone and let
+    /// `refreshWeeklyGoalsIfDue` own them. Only a user-initiated profile edit asks for an immediate
+    /// recompute, and even that uses the smoothed weight so it agrees with the weekly result.
+    func updateProfile(_ profile: Profile, recomputeGoals: Bool = false) {
         profileStore.save(profile)
         self.profile = profile
-        nutritionStore.autoAdjustGoals(profile: profile)
+        guard recomputeGoals else { return }
+        nutritionStore.autoAdjustGoals(
+            profile: profile,
+            smoothedWeightKg: weightStore.averageKg(days: 7)
+        )
     }
 
     /// Record a weigh-in (lb): append to the weight log and update the profile's current weight so the
