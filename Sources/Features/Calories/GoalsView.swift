@@ -30,16 +30,11 @@ struct GoalsView: View {
         avgStrain.map(GoalCalculator.suggestedActivity(avgDayStrain:))
     }
 
-    /// Calories are computed from the SMOOTHED weight, matching the weekly refresh, so the number
-    /// previewed here is the number that will actually be applied.
+    /// Computed from the current weight — the same value the weekly refresh will use, so the number
+    /// previewed here is the number that gets applied.
     private var estimate: GoalCalculator.Result? {
         guard let profile = appModel.profile, let goal, let activity else { return nil }
-        return GoalCalculator.estimate(
-            profile: profile,
-            activity: activity,
-            goal: goal,
-            smoothedWeightKg: appModel.weightStore.averageKg(days: 7)
-        )
+        return GoalCalculator.estimate(profile: profile, activity: activity, goal: goal)
     }
 
     var body: some View {
@@ -71,7 +66,7 @@ struct GoalsView: View {
                         .opacity(estimate == nil ? 0.5 : 1)
                         .disabled(estimate == nil)
 
-                    Txt("Targets refresh every Monday from your 7-day average weight.",
+                    Txt("Targets refresh every Monday from your latest weight.",
                         variant: .footnote, color: .labelTertiary, center: true)
                 }
                 .padding(Theme.Spacing.xl)

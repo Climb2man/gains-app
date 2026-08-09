@@ -191,12 +191,27 @@ final class AppModel {
 
         lastWhoopWeightSync = Date()
 
+        // Keep the PROFILE weight in step first, and unconditionally.
+        //
+        // This used to sit after the de-dup guard below, which meant that once today's weigh-in
+        // matched WHOOP the whole function returned early and the profile was never corrected — so
+        // `profile.weightKg` (shown in the Overview metric strip, and the input to every BMR
+        // calculation) could stay stale indefinitely while the weight card showed the right number.
+        // That is why two different weights could appear in the app at once.
+        if var current = profile, abs(current.weightKg - measurement.weightKg) >= 0.005 {
+            current.weightKg = measurement.weightKg
+            updateProfile(current)
+        }
+
+        // The weigh-in log only needs a new row when the value actually moved: `log` replaces the
+        // entry for the day, so re-writing an identical one would just churn persistence and the
+        // personal-MCP slice.
         let todayKey = FoodLogStore.dayKey(Date())
         if let latest = weightStore.entries.last, latest.date == todayKey,
            abs(latest.kg - measurement.weightKg) < 0.005 {
             return false
         }
-        logWeight(lb: Units.kgToLb(measurement.weightKg))
+        weightStore.log(lb: Units.kgToLb(measurement.weightKg))
         return true
     }
 
@@ -260,10 +275,7 @@ final class AppModel {
             return false
         }
         UserDefaults.standard.set(week, forKey: Self.weeklyGoalRefreshKey)
-        nutritionStore.autoAdjustGoals(
-            profile: profile,
-            smoothedWeightKg: weightStore.averageKg(days: 7)
-        )
+        nutritionStore.autoAdjustGoals(profile: profile)
         return true
     }
 
@@ -311,10 +323,7 @@ final class AppModel {
         profileStore.save(profile)
         self.profile = profile
         guard recomputeGoals else { return }
-        nutritionStore.autoAdjustGoals(
-            profile: profile,
-            smoothedWeightKg: weightStore.averageKg(days: 7)
-        )
+        nutritionStore.autoAdjustGoals(profile: profile)
     }
 
     /// Record a weigh-in (lb): append to the weight log and update the profile's current weight so the

@@ -141,8 +141,9 @@ enum GoalCalculator {
         }
     }
 
-    /// Inputs for one estimate. `weightKg` should be the SMOOTHED (7-day average) weight, not a
-    /// single morning reading — see `WeightStore.averageKg(days:)`.
+    /// Inputs for one estimate. `weightKg` is the CURRENT weight — the latest reading Whoop holds,
+    /// not an average. Averaging was tried and removed: two different weights appearing in the app
+    /// is worse than a target that moves a little.
     struct Input {
         var sex: Sex
         var ageYears: Int
@@ -193,19 +194,17 @@ enum GoalCalculator {
         )
     }
 
-    /// Convenience: build the input from a `Profile`, optionally overriding the weight with a
-    /// smoothed average (the weekly refresh passes the 7-day mean rather than today's reading).
+    /// Convenience: build the input from a `Profile`.
     static func estimate(
         profile: Profile,
         activity: ActivityLevel,
-        goal: GoalDirection,
-        smoothedWeightKg: Double? = nil
+        goal: GoalDirection
     ) -> Result {
         estimate(Input(
             sex: profile.sex,
             ageYears: profile.ageYears,
             heightCm: profile.heightCm,
-            weightKg: smoothedWeightKg ?? profile.weightKg,
+            weightKg: profile.weightKg,
             activity: activity,
             goal: goal
         ))

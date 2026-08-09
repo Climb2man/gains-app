@@ -168,19 +168,17 @@ final class NutritionStore {
     /// Runs on profile changes (weight edit, Apple Health import) and day rollover; a no-op unless the
     /// switch is on, a recipe exists, and the derived numbers changed. The steps goal is preserved (the
     /// calculator has no step model). Streak history stays intact: `setGoals` versions the change from today.
-    /// `smoothedWeightKg` is the trailing 7-day mean when the weekly refresh calls this; passing nil
-    /// falls back to the profile's current weight.
+    /// Recomputes from the profile's CURRENT weight.
     ///
     /// The two `rawValue` lookups are also the migration gate. A recipe saved by the previous goal
     /// model stores a direction such as "lose1", which matches no current case, so this returns
     /// early and the user's existing targets are left exactly as they are until they choose a goal.
-    func autoAdjustGoals(profile: Profile, smoothedWeightKg: Double? = nil) {
+    func autoAdjustGoals(profile: Profile) {
         guard autoAdjustsGoals, let recipe = goalRecipe,
               let activity = GoalCalculator.ActivityLevel(rawValue: recipe.activity),
               let direction = GoalCalculator.GoalDirection(rawValue: recipe.direction) else { return }
         let result = GoalCalculator.estimate(
-            profile: profile, activity: activity, goal: direction,
-            smoothedWeightKg: smoothedWeightKg
+            profile: profile, activity: activity, goal: direction
         )
         let next = Goals(
             calorieGoal: Double(result.calorieGoal), proteinGoal: Double(result.proteinGoal),

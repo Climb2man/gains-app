@@ -131,14 +131,4 @@ final class GoalCalculatorBLSTests: XCTestCase {
         XCTAssertEqual(GoalCalculator.suggestedActivity(avgDayStrain: 99), .extraActive)
     }
 
-    // MARK: smoothed weight
-
-    /// The weekly refresh feeds a 7-day mean, so the override must actually be used.
-    func testSmoothedWeightOverridesProfileWeight() {
-        let atProfile = GoalCalculator.estimate(profile: profile, activity: .moderate, goal: .cut)
-        let atSmoothed = GoalCalculator.estimate(profile: profile, activity: .moderate, goal: .cut,
-                                                 smoothedWeightKg: 70.0)
-        XCTAssertNotEqual(atProfile.calorieGoal, atSmoothed.calorieGoal)
-        XCTAssertGreaterThan(atSmoothed.calorieGoal, atProfile.calorieGoal)
-    }
 }

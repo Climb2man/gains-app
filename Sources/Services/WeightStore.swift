@@ -70,17 +70,6 @@ final class WeightStore {
     /// The most recent weigh-in in lb, or nil if none logged.
     var latestLb: Double? { entries.last.map { Units.kgToLb($0.kg) } }
 
-    /// Mean weight (kg) over the last `days` calendar days, or nil when the window is empty.
-    ///
-    /// Goal calories are computed from this rather than the newest reading. A smart scale pushes a
-    /// figure to WHOOP most mornings and day-to-day noise (hydration, food in transit) is easily a
-    /// pound or two — recomputing targets off a single reading would jitter them daily for no
-    /// physiological reason. Averaging, then refreshing weekly, keeps the numbers steady.
-    func averageKg(days: Int = 7) -> Double? {
-        let window = windowedEntries(days: days)
-        guard !window.isEmpty else { return nil }
-        return window.reduce(0) { $0 + $1.kg } / Double(window.count)
-    }
 
     /// All weigh-ins as lb values, oldest → newest.
     var allLb: [Double] { entries.map { Units.kgToLb($0.kg) } }
