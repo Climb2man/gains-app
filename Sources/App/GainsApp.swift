@@ -30,7 +30,11 @@ struct GainsApp: App {
     var body: some Scene {
         WindowGroup {
             content
-                .preferredColorScheme(.light)
+                // Pinned dark, not `nil`/system. Theme.Colors has no light variant — the accents
+                // are tuned to be electric on near-black and are illegible on white — so following
+                // the system setting would produce a broken half-theme rather than a light one.
+                // This also carries system chrome (keyboards, alerts, pickers) into dark with it.
+                .preferredColorScheme(.dark)
         }
     }
 

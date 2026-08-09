@@ -54,7 +54,9 @@ private struct ShimmerOverlay: ViewModifier {
             content.overlay {
                 GeometryReader { geo in
                     LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.55), .clear],
+                        // 0.55 was tuned for a white skeleton; on a near-black surface that reads as
+                        // a strobe rather than a sheen.
+                        colors: [.clear, Color.white.opacity(0.10), .clear],
                         startPoint: .leading, endPoint: .trailing
                     )
                     .frame(width: geo.size.width * 0.5)

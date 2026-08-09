@@ -1,39 +1,65 @@
 import SwiftUI
 
 enum Theme {
+    /// DARK ONLY. The app pins `.preferredColorScheme(.dark)` at the root, so these are absolute
+    /// values rather than per-scheme pairs and there is no light variant to keep in step.
+    ///
+    /// Direction: WHOOP's colour personality. A near-black ground, almost no chrome, and vivid
+    /// accents that carry meaning rather than decorate. The greens and yellows below are electric
+    /// on purpose — they are unreadable on white, which is precisely why this is not a theme that
+    /// could be flipped to light without redesigning it.
     enum Colors {
-        static let background = Color(hex: "F7F7FB")
-        static let surface = Color(hex: "FFFFFF")
-        static let surface2 = Color(hex: "EEEFF2")
-        static let label = Color(hex: "18191C")
-        static let labelSecondary = Color(hex: "616265")
-        static let labelTertiary = Color(hex: "8B8C8F")
-        static let separator = Color(hex: "E3E4E7")
-        static let borderStrong = Color(hex: "CACBCE")
-        static let fieldBackground = Color(hex: "EEEFF2")
-        static let tint = Color(hex: "3B82F6")
-        static let tintHover = Color(hex: "2563EB")
-        static let tintPressed = Color(hex: "1D4ED8")
-        static let tintSoft = Color(hex: "DBEAFE")
-        static let tintFaint = Color(hex: "EFF6FF")
-        static let onTint = Color(hex: "FFFFFF")
-        static let success = Color(hex: "62C58C")
-        static let warning = Color(hex: "FF8947")
-        static let danger = Color(hex: "F46C41")
-        static let successSoft = Color(hex: "62C58C").opacity(0.14)
-        static let dangerSoft = Color(hex: "F46C41").opacity(0.12)
+        /// Not pure black: a faint blue cast keeps the surfaces above it from looking like haze.
+        static let background = Color(hex: "08090B")
+        static let surface = Color(hex: "121317")
+        static let surface2 = Color(hex: "1B1D22")
+        static let label = Color(hex: "F5F6F8")
+        static let labelSecondary = Color(hex: "A0A4AD")
+        static let labelTertiary = Color(hex: "6E727B")
+        static let separator = Color(hex: "24262C")
+        static let borderStrong = Color(hex: "34373E")
+        static let fieldBackground = Color(hex: "1B1D22")
+
+        /// WHOOP's strain blue, used as the app's chrome accent.
+        static let tint = Color(hex: "0093E7")
+        static let tintHover = Color(hex: "2AA8EC")
+        static let tintPressed = Color(hex: "47B6F0")
+        static let tintSoft = Color(hex: "0093E7").opacity(0.20)
+        static let tintFaint = Color(hex: "0093E7").opacity(0.09)
+        /// Deep navy rather than white: white text on the strain blue vibrates badly.
+        static let onTint = Color(hex: "05161F")
+
+        /// The recovery triad. Used for state throughout the app, not only for recovery — a red
+        /// warning and a red recovery are the same red on purpose, so the vocabulary stays small.
+        static let success = Color(hex: "16EC06")
+        static let warning = Color(hex: "FFDE00")
+        static let danger = Color(hex: "FF0026")
+        static let successSoft = success.opacity(0.16)
+        static let dangerSoft = danger.opacity(0.14)
     }
 
     enum Chart {
-        static let recovery = Color(hex: "5DC0BA")
-        static let calories = Color(hex: "FF8947")
-        static let heartrate = Color(hex: "F46C41")
-        static let sleep = Color(hex: "B182FE")
-        static let activity = Color(hex: "62C58C")
-        static let strain = Color(hex: "5A9CFF")
-        static let protein = Color(hex: "5A9CFF")
-        static let carbs = Color(hex: "FF8947")
-        static let fat = Color(hex: "B182FE")
+        /// Recovery green — WHOOP's primary identity colour.
+        static let recovery = Theme.Colors.success
+        static let calories = Color(hex: "FF8A3D")
+        static let heartrate = Theme.Colors.danger
+        static let sleep = Color(hex: "9C8BFF")
+        static let activity = Color(hex: "16EC06")
+        static let strain = Theme.Colors.tint
+        static let protein = Theme.Colors.tint
+        static let carbs = Color(hex: "FF8A3D")
+        static let fat = Color(hex: "9C8BFF")
+
+        /// Recovery % → its band colour, on WHOOP's own thresholds: green ≥67, yellow 34–66,
+        /// red below. This is the one idea worth copying wholesale — in WHOOP the number is not
+        /// merely tinted, the colour IS the reading, and it is legible before the digits are.
+        static func recoveryBand(_ pct: Double) -> Color {
+            switch pct {
+            case 67...: return Theme.Colors.success
+            case 34 ..< 67: return Theme.Colors.warning
+            default: return Theme.Colors.danger
+            }
+        }
 
         /// A brighter partner of a metric hue, blended toward white for a gradient's highlight end.
         static func light(_ hue: Color) -> Color {
@@ -69,16 +95,15 @@ enum Theme {
             hue.opacity(0.12)
         }
 
-        /// Vertical wash behind the recovery hero ring, by recovery band:
-        /// >=67 cyan→mint, 34..<67 cyan→amber, <34 amber→coral.
+        /// Vertical wash behind the recovery hero ring, taken from the band colour so the backdrop
+        /// and the ring agree. Deliberately a single hue fading into itself rather than a two-colour
+        /// blend: on a near-black ground a gradient between two vivid hues reads as a smear.
         static func heroGradient(forRecovery pct: Double) -> LinearGradient {
-            let stops: [Color]
-            switch pct {
-            case 67...: stops = [recovery, Theme.Colors.success]
-            case 34 ..< 67: stops = [recovery, light(Theme.Colors.warning)]
-            default: stops = [Theme.Colors.warning, light(Theme.Colors.danger)]
-            }
-            return LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
+            let band = recoveryBand(pct)
+            return LinearGradient(
+                colors: [band.opacity(0.55), band.opacity(0.06)],
+                startPoint: .top, endPoint: .bottom
+            )
         }
 
         /// Ghost ring track for the hero ring on the scenic backdrop (vs the on-white `ringTrack`).
@@ -134,12 +159,16 @@ enum Theme {
             .system(size: size, weight: weight, design: .rounded).monospacedDigit()
         }
 
-        /// Centerpiece number, e.g. a hero ring's center. 44pt.
-        static let heroNumber = number(size: 44, weight: .semibold)
-        /// A card's headline number when it isn't the screen hero. 34pt.
-        static let metricNumber = number(size: 34, weight: .bold)
-        /// Medium metric, e.g. a stat row's value. 22pt.
-        static let statNumber = number(size: 22, weight: .semibold)
+        // The ramp runs larger and heavier than a stock iOS scale. In WHOOP the reading is the
+        // interface — the number arrives before any label does — and a dark ground carries big
+        // type without the page feeling shouty the way a light one would.
+
+        /// Centerpiece number, e.g. a hero ring's center.
+        static let heroNumber = number(size: 54, weight: .bold)
+        /// A card's headline number when it isn't the screen hero.
+        static let metricNumber = number(size: 40, weight: .bold)
+        /// Medium metric, e.g. a stat row's value.
+        static let statNumber = number(size: 25, weight: .semibold)
         /// Inline numeric value in body copy. 17pt.
         static let inlineNumber = number(size: 17, weight: .semibold)
 
@@ -154,10 +183,13 @@ enum Theme {
             let x: CGFloat
             let y: CGFloat
         }
-        /// Default resting card shadow: low and tight.
-        static let card = Style(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 4)
-        /// Emphasized / hero card shadow: floats slightly more.
-        static let cardElevated = Style(color: Color.black.opacity(0.06), radius: 20, x: 0, y: 8)
+        /// On a near-black ground a black drop shadow is invisible, so elevation is carried by the
+        /// surface being lighter than the background, not by a shadow. These stay defined (call
+        /// sites expect them) but are dialled almost to nothing — WHOOP's surfaces are flat, and a
+        /// fake glow around every card is the fastest way to make a dark theme look cheap.
+        static let card = Style(color: Color.black.opacity(0.35), radius: 10, x: 0, y: 3)
+        /// Emphasized / hero card: a touch more separation, still no glow.
+        static let cardElevated = Style(color: Color.black.opacity(0.45), radius: 18, x: 0, y: 6)
         /// Raised chrome (the center FAB): tinted, directional.
         static func tinted(_ color: Color) -> Style {
             Style(color: color.opacity(0.35), radius: 12, x: 0, y: 6)
@@ -179,16 +211,20 @@ enum Theme {
     }
 
     enum Heatmap {
-        /// Recovery % → cell color: the recovery hue at graded opacity by band.
+        /// Recovery % → cell colour. Now the BAND colour rather than one hue at graded opacity:
+        /// a green calendar shaded lighter and darker asks the reader to judge luminance, where
+        /// green/yellow/red is legible at a glance and matches what WHOOP itself shows.
+        /// Opacity still varies within a band so a run of similar days keeps some texture.
         static func recoveryRamp(_ pct: Double) -> Color {
             let opacity: Double
             switch pct {
-            case 67...: opacity = 1.0
-            case 50 ..< 67: opacity = 0.85
-            case 34 ..< 50: opacity = 0.55
-            default: opacity = 0.25
+            case 84...: opacity = 1.0
+            case 67 ..< 84: opacity = 0.82
+            case 50 ..< 67: opacity = 0.92
+            case 34 ..< 50: opacity = 0.72
+            default: opacity = 0.85
             }
-            return Theme.Chart.recovery.opacity(opacity)
+            return Theme.Chart.recoveryBand(pct).opacity(opacity)
         }
     }
 
@@ -228,8 +264,10 @@ extension View {
         if #available(iOS 26.0, *) {
             glassEffect(Glass.gainsChrome(tint: tint, interactive: interactive), in: shape)
         } else {
+            // Hairline is white-on-dark: the previous black stroke was invisible against the
+            // near-black ground, leaving the pre-iOS-26 tab bar with no edge at all.
             background(Theme.Material.chromeFallback, in: shape)
-                .overlay { shape.stroke(Color.black.opacity(0.06), lineWidth: 1) }
+                .overlay { shape.stroke(Color.white.opacity(0.10), lineWidth: 1) }
         }
     }
 }
