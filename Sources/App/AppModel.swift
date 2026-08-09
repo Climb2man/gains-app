@@ -178,7 +178,7 @@ final class AppModel {
     /// to WHOOP, WHOOP flows here, and there is no manual entry anywhere in the UI.
     ///
     /// No-op when unlinked, on the sample container, when WHOOP holds no weight, or when today's
-    /// entry already matches — the last case matters because `logWeight` persists and fires
+    /// entry already matches — the last case matters because logging persists and fires
     /// `didChange`, which re-pushes the personal-MCP slice.
     ///
     /// Trade-off accepted deliberately: WHOOP's private API can break without notice, and with no
@@ -255,8 +255,7 @@ final class AppModel {
         return true
     }
 
-    /// Recompute calorie + macro targets from the trailing 7-day average weight, at most once per
-    /// ISO week.
+    /// Recompute calorie + macro targets from the current weight, at most once per ISO week.
     ///
     /// Weekly rather than daily on purpose: a smart scale pushes a figure most mornings, and normal
     /// day-to-day swing (hydration, food in transit) is a pound or two. Recomputing on every reading
@@ -312,13 +311,13 @@ final class AppModel {
     /// Replace the in-memory profile after an edit elsewhere (keeps the gate's copy in sync).
     ///
     /// `recomputeGoals` defaults to FALSE, which is the important part. This used to recompute
-    /// unconditionally, and since `logWeight` calls it on every WHOOP weight sync, calorie and macro
+    /// unconditionally, and since the weight sync calls it, calorie and macro
     /// targets were being rebuilt daily from that morning's raw scale reading — bypassing the weekly
     /// refresh entirely and reintroducing exactly the day-to-day drift it exists to prevent.
     ///
     /// Automatic paths (weight sync, WHOOP profile sync) therefore leave the targets alone and let
     /// `refreshWeeklyGoalsIfDue` own them. Only a user-initiated profile edit asks for an immediate
-    /// recompute, and even that uses the smoothed weight so it agrees with the weekly result.
+    /// recompute; every automatic path leaves the targets to the weekly refresh.
     func updateProfile(_ profile: Profile, recomputeGoals: Bool = false) {
         profileStore.save(profile)
         self.profile = profile
@@ -326,16 +325,6 @@ final class AppModel {
         nutritionStore.autoAdjustGoals(profile: profile)
     }
 
-    /// Record a weigh-in (lb): append to the weight log and update the profile's current weight so the
-    /// goal-pace evaluator and auto-adjust track the latest number. The store's `didChange` re-pushes
-    /// the personal-MCP slice (debounced, no-op unless opt-in).
-    func logWeight(lb: Double, bodyFatPct: Double? = nil, on date: Date = Date()) {
-        weightStore.log(lb: lb, on: date, bodyFatPct: bodyFatPct)
-        if var updated = profile {
-            updated.weightKg = Units.lbToKg(lb)
-            updateProfile(updated)
-        }
-    }
 
     /// Reset to the onboarding gate (sign-out / start-over). Clears the stored profile; does not revoke
     /// the Whoop session at the server (that's the connect screen's job).

@@ -193,7 +193,7 @@ struct OnboardingFlow: View {
         } else {
             appModel.nutritionStore.setGoals(goals)
             // Persist the goal + activity choice so the weekly Monday refresh can re-derive these
-            // targets from the trailing 7-day average weight. Without the recipe the numbers would
+            // targets from the latest weight. Without the recipe the numbers would
             // be frozen at whatever today's weight happened to be.
             appModel.nutritionStore.setGoalRecipe(model.goalRecipe, autoAdjust: true)
             appModel.foodLogSettings.setBias(model.calorieBias)
@@ -528,7 +528,7 @@ private struct GoalsStep: View {
             CalorieBiasCard(selection: $model.calorieBias)
 
             Txt(
-                "Targets refresh every Monday from your 7-day average weight.",
+                "Targets refresh every Monday from your latest weight.",
                 variant: .footnote, color: .labelTertiary, center: true
             )
         }
