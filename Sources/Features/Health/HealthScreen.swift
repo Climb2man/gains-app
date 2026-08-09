@@ -23,6 +23,9 @@ struct HealthScreen: View {
                     }
 
                     connectionsSection
+                    // Still here, but it now feeds DayCountdownStrip on Overview and Calories rather
+                    // than the lock-screen widget, which was removed with the widget target (App
+                    // Groups are unavailable on a free Apple ID).
                     DayCountdownSettingsSection()
                     MCPServerSection()
                     dataSection

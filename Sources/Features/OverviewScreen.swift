@@ -117,6 +117,9 @@ struct OverviewScreen: View {
                 adherenceByDay: model.adherenceByDay
             )
 
+            // One quiet line, and nothing at all until a countdown is set.
+            DayCountdownStrip()
+
             // Calories left is the first card, above recovery. It sits INSIDE the hero zone and
             // below the date strip on purpose: the number is scoped to the selected day, so the
             // day picker has to come first or the ring would change without visible cause.

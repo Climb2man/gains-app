@@ -218,6 +218,8 @@ struct FoodLogView: View {
     private var overviewHeader: some View {
         if onOpenInsights != nil {
             VStack(spacing: Theme.Spacing.md) {
+                // One quiet line, and nothing at all until a countdown is set.
+                DayCountdownStrip()
                 CalorieOverviewHeader(
                     totals: model.totals,
                     goals: model.goals,
