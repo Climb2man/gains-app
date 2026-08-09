@@ -107,6 +107,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             build
 
       - name: Package Payload/ into .ipa
@@ -118,12 +119,16 @@ jobs:
           test -d "$APP" || { echo "::error::$APP not found"; ls -R build/Build/Products || true; exit 1; }
           mkdir -p Payload
           cp -R "$APP" Payload/
-          zip -qry Gains-unsigned.ipa Payload
-          ls -lh Gains-unsigned.ipa
+          # Version in the filename: the .ipa gets saved to the phone, and an old copy with the
+          # same name is indistinguishable from a new one — which cost real debugging time.
+          NAME="Gains-b${{ github.run_number }}.ipa"
+          zip -qry "$NAME" Payload
+          echo "IPA_NAME=$NAME" >> "$GITHUB_ENV"
+          ls -lh "$NAME"
 
       - name: Upload .ipa artifact
         uses: actions/upload-artifact@v4
         with:
           name: Gains-unsigned-ipa
-          path: Gains-unsigned.ipa
+          path: ${{ env.IPA_NAME }}
           retention-days: 30

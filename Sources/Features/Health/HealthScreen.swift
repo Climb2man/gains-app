@@ -141,13 +141,26 @@ struct HealthScreen: View {
         }
     }
 
+    /// "0.1.0 (b42)" — the marketing version plus the CI build number, read from the bundle rather
+    /// than hardcoded so it cannot drift from what actually shipped.
+    private static var versionString: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (b\(build))"
+    }
+
     private var footer: some View {
         VStack(spacing: Theme.Spacing.sm) {
             Txt(
                 "A private health tracker. Your data stays on this device.",
                 variant: .footnote, color: .labelTertiary, center: true
             )
-            Txt("Gains · v0", variant: .footnote, color: .labelTertiary, center: true)
+            // Was the hardcoded string "Gains · v0". With sideloading there is no App Store version
+            // to check against, and every build carried identical version numbers — so there was no
+            // way to tell which build was actually installed. That cost real time: a stale .ipa
+            // saved on the phone kept being reinstalled and looked like the changes had not applied.
+            Txt("Gains · \(Self.versionString)", variant: .footnote, color: .labelTertiary, center: true)
         }
         .padding(.top, Theme.Spacing.md)
     }
