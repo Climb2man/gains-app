@@ -16,6 +16,8 @@ struct GoalsView: View {
     @State private var goal: GoalCalculator.GoalDirection?
     @State private var activity: GoalCalculator.ActivityLevel?
     @State private var steps: Int
+    /// How AI estimates lean. Chosen once in onboarding and previously unreachable afterwards.
+    @State private var bias: CalorieBias = .balanced
     /// 7-day mean WHOOP day-strain, used only to suggest an activity band. nil until loaded/unlinked.
     @State private var avgStrain: Double?
 
@@ -60,6 +62,7 @@ struct GoalsView: View {
                     }
 
                     stepsField
+                    CalorieBiasCard(selection: $bias)
 
                     AppButton(title: "Save goals", kind: .primary) { save() }
                         .opacity(estimate == nil ? 0.5 : 1)
@@ -84,7 +87,10 @@ struct GoalsView: View {
                     }
                 }
             }
-            .onAppear(perform: seedFromStoredRecipe)
+            .onAppear {
+                seedFromStoredRecipe()
+                bias = appModel.foodLogSettings.bias
+            }
             .task { avgStrain = await appModel.whoopStrainAverage(days: 7) }
         }
     }
@@ -248,6 +254,7 @@ struct GoalsView: View {
             GoalRecipe(activity: estimate.activity.rawValue, direction: estimate.goal.rawValue),
             autoAdjust: true
         )
+        appModel.foodLogSettings.setBias(bias)
         dismiss()
     }
 }

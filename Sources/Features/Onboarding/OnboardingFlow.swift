@@ -502,7 +502,9 @@ private struct OnboardingChoiceRow: View {
 
 /// Calorie-estimation bias selector for the goals step. Each row is a selectable title + description;
 /// the selected row shows a filled check.
-private struct CalorieBiasCard: View {
+/// Not private: GoalsView reuses this so the bias can be changed after onboarding. It used to be
+/// onboarding-only, which meant a one-time choice you could never revisit.
+struct CalorieBiasCard: View {
     @Binding var selection: CalorieBias
 
     var body: some View {
