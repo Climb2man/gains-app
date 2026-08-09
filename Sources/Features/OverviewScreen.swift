@@ -92,16 +92,11 @@ struct OverviewScreen: View {
             }
             .padding(.horizontal, Theme.Spacing.lg)
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                SectionHeader(title: "Your health score")
-                ComingSoonCard(
-                    title: "Biological age",
-                    description: "A single view of how your body is tracking. It arrives once your labs are connected."
-                )
-                UnifyHealthCard()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.top, Theme.Spacing.lg)
+            // "Your health score" section removed. It held a Biological age placeholder that was
+            // never going to arrive ("once your labs are connected" — there is no labs integration),
+            // and a "Unify your health information" card whose onConnect was never wired, so it
+            // looked tappable and did nothing. That card also advertised Apple Health, which cannot
+            // be provisioned on a free Apple ID, and Whoop, which is already connected.
         }
         .padding(.bottom, 96)
     }
@@ -143,76 +138,8 @@ struct OverviewScreen: View {
     }
 }
 
-/// A plain title above a secondary section (e.g. "Your health score").
-struct SectionHeader: View {
-    let title: String
-    var body: some View {
-        Txt(title, variant: .title2)
-            .padding(.horizontal, Theme.Spacing.xs)
-    }
-}
 
-/// Placeholder card for a feature that arrives later (the biological-age teaser).
-/// No fabricated number, no claim.
-struct ComingSoonCard: View {
-    let title: String
-    let description: String
 
-    var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.Colors.tint)
-                    Txt(title, variant: .bodyEmphasized)
-                    Spacer(minLength: 0)
-                    Pill(text: "Soon", tone: .tint)
-                }
-                Txt(description, variant: .footnote, color: .labelSecondary)
-            }
-        }
-    }
-}
-
-/// The only connect affordance on Overview: an invite to unify the user's health data.
-/// The per-source Connections list lives in Health → Connections.
-struct UnifyHealthCard: View {
-    var onConnect: (() -> Void)?
-
-    var body: some View {
-        TappableCard(onPress: onConnect, accessibilityLabel: "Unify your health information") {
-            HStack(spacing: Theme.Spacing.lg) {
-                sourceGlyphs
-
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Txt("Unify your health information", variant: .bodyEmphasized)
-                    Txt("Connect labs, Whoop, and your scale into one private record on this phone.",
-                        variant: .footnote, color: .labelSecondary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Theme.Colors.labelTertiary)
-            }
-        }
-    }
-
-    private var sourceGlyphs: some View {
-        HStack(spacing: -Theme.Spacing.sm) {
-            sourceDisc { BrandLogo(.appleHealth, size: 28) }
-            sourceDisc { BrandLogo(.whoop, size: 28) }
-        }
-    }
-
-    private func sourceDisc<Logo: View>(@ViewBuilder _ logo: () -> Logo) -> some View {
-        logo()
-            .padding(Theme.Spacing.sm)
-            .background(Circle().fill(Theme.Colors.surface))
-            .overlay(Circle().stroke(Theme.Colors.surface, lineWidth: 2))
-            .frame(width: 44, height: 44)
-    }
-}
 
 /// Scrubbable 7-day recovery trend with the user's own typical band shaded behind the line and an
 /// "Avg N%" pill. Tapping opens a MetricDetailSheet. Multi-day, so it doesn't re-scope with the day
