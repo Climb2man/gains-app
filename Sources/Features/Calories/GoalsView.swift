@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Goal setting, reduced to the only two decisions the Bigger Leaner Stronger method needs:
+/// what you are doing (cut / maintain / lean bulk) and how much you train (hours per week).
+///
+/// Calories and macros are DERIVED and cannot be typed. Everything else the maths needs — weight,
+/// height, age, sex — comes from WHOOP. The daily step target is the one number still set by hand,
+/// because it is not part of the calorie model and WHOOP exposes no step goal to read.
 struct GoalsView: View {
     @Environment(AppModel.self) private var appModel
     @Environment(\.dismiss) private var dismiss
@@ -7,121 +13,69 @@ struct GoalsView: View {
     let goals: Goals
     let onSave: (Goals) -> Void
 
-    @State private var calorie: String
-    @State private var protein: String
-    @State private var fat: String
-    @State private var carb: String
-    /// Daily step target, a first-class goal alongside the macros. Int-backed so `NumberStepper` binds
-    /// directly (the macros stay text fields).
+    @State private var goal: GoalCalculator.GoalDirection?
+    @State private var activity: GoalCalculator.ActivityLevel?
     @State private var steps: Int
-    @State private var calcOpen = false
-    /// The calculator inputs behind the current numbers, seeded from the store and refreshed when the
-    /// user applies the calculator. Required for the auto-adjust switch to work.
-    @State private var appliedRecipe: GoalRecipe?
-    /// Auto-adjust switch: recalc calories/macros from the current weight (via the recipe) whenever the
-    /// weight changes. Persisted on save.
-    @State private var autoAdjust = false
+    /// 7-day mean WHOOP day-strain, used only to suggest an activity band. nil until loaded/unlinked.
+    @State private var avgStrain: Double?
 
     init(goals: Goals, onSave: @escaping (Goals) -> Void) {
         self.goals = goals
         self.onSave = onSave
-        _calorie = State(initialValue: Self.intString(goals.calorieGoal))
-        _protein = State(initialValue: Self.intString(goals.proteinGoal))
-        _fat = State(initialValue: Self.intString(goals.fatGoal))
-        _carb = State(initialValue: Self.intString(goals.carbGoal))
         _steps = State(initialValue: goals.stepsGoal)
     }
 
-    private var calorieNum: Int? { Int(calorie.trimmingCharacters(in: .whitespaces)) }
-    private var proteinNum: Int? { Int(protein.trimmingCharacters(in: .whitespaces)) }
-    private var fatNum: Int? { Int(fat.trimmingCharacters(in: .whitespaces)) }
-    private var carbNum: Int? { Int(carb.trimmingCharacters(in: .whitespaces)) }
+    /// The activity WHOOP's recent strain points at, if we have strain at all.
+    private var suggested: GoalCalculator.ActivityLevel? {
+        avgStrain.map(GoalCalculator.suggestedActivity(avgDayStrain:))
+    }
 
-    private var allValid: Bool {
-        guard let c = calorieNum, c > 0,
-              let p = proteinNum, p >= 0,
-              let f = fatNum, f >= 0,
-              let cb = carbNum, cb >= 0 else { return false }
-        return true
+    /// Calories are computed from the SMOOTHED weight, matching the weekly refresh, so the number
+    /// previewed here is the number that will actually be applied.
+    private var estimate: GoalCalculator.Result? {
+        guard let profile = appModel.profile, let goal, let activity else { return nil }
+        return GoalCalculator.estimate(
+            profile: profile,
+            activity: activity,
+            goal: goal,
+            smoothedWeightKg: appModel.weightStore.averageKg(days: 7)
+        )
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    HStack {
-                        Txt("Your goals", variant: .largeTitle)
-                        Spacer(minLength: 0)
-                        Button { calcOpen = true } label: {
-                            HStack(spacing: Theme.Spacing.xs) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 15))
-                                Txt("Help me", variant: .subhead, color: .tint)
-                            }
-                            .foregroundStyle(Theme.Colors.tint)
-                            .padding(.vertical, Theme.Spacing.sm)
-                            .padding(.horizontal, Theme.Spacing.md)
-                            .background(Capsule().fill(Theme.Colors.fieldBackground))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Help me set my goal")
-                    }
-
-                    Txt("Set your daily targets. Tap the sparkles for an estimate, then edit anything and save.",
+                    Txt("Your goals", variant: .largeTitle)
+                    Txt("Pick what you're doing and how much you train. Everything else is worked out "
+                        + "from your WHOOP profile.",
                         variant: .body, color: .labelSecondary)
 
-                    macroPreview
+                    goalSection
+                    activitySection
 
-                    Card {
-                        Field(label: "Daily calories (kcal)", text: $calorie,
-                              placeholder: "e.g. 2200", keyboard: .numberPad)
-                        Txt("Your headline daily target.", variant: .footnote, color: .labelTertiary)
+                    if let estimate {
+                        resultCard(estimate)
+                    } else {
+                        Card {
+                            Txt(appModel.profile == nil
+                                ? "Finish setting up your profile first."
+                                : "Choose a goal and an activity level to see your targets.",
+                                variant: .footnote, color: .labelTertiary)
+                        }
                     }
-
-                    macroField(MacroCopy.protein, text: $protein, placeholder: "e.g. 160")
-                    macroField(MacroCopy.fat, text: $fat, placeholder: "e.g. 73")
-                    macroField(MacroCopy.carb, text: $carb, placeholder: "e.g. 206")
 
                     stepsField
 
-                    if appliedRecipe != nil {
-                        Card {
-                            Toggle(isOn: $autoAdjust) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Txt("Auto-adjust with weight", variant: .bodyEmphasized)
-                                    Txt(
-                                        "Recalculates calories and macros from your current weight "
-                                            + "(using your calculator settings) whenever it changes. "
-                                            + "Past days keep the goals they were judged against.",
-                                        variant: .footnote, color: .labelTertiary
-                                    )
-                                }
-                            }
-                            .tint(Theme.Colors.tint)
-                        }
-                    }
+                    AppButton(title: "Save goals", kind: .primary) { save() }
+                        .opacity(estimate == nil ? 0.5 : 1)
+                        .disabled(estimate == nil)
 
-                    AppButton(title: "Save goals", kind: .primary) {
-                        guard allValid,
-                              let c = calorieNum, let p = proteinNum,
-                              let f = fatNum, let cb = carbNum else { return }
-                        onSave(Goals(
-                            calorieGoal: Double(c), proteinGoal: Double(p),
-                            fatGoal: Double(f), carbGoal: Double(cb),
-                            stepsGoal: steps
-                        ))
-                        appModel.nutritionStore.setGoalRecipe(appliedRecipe, autoAdjust: autoAdjust)
-                        dismiss()
-                    }
-                    .opacity(allValid ? 1 : 0.5)
-                    .disabled(!allValid)
-
-                    Txt("Goals are targets you set.",
+                    Txt("Targets refresh every Monday from your 7-day average weight.",
                         variant: .footnote, color: .labelTertiary, center: true)
                 }
                 .padding(Theme.Spacing.xl)
             }
-            .scrollDismissesKeyboard(.interactively)
             .background(Theme.Colors.background)
             .navigationTitle("Calories")
             .navigationBarTitleDisplayMode(.inline)
@@ -136,35 +90,93 @@ struct GoalsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $calcOpen) {
-                GoalCalculatorSheet(profile: appModel.profile) { result in
-                    calorie = String(result.calorieGoal)
-                    protein = String(result.proteinGoal)
-                    fat = String(result.fatGoal)
-                    carb = String(result.carbGoal)
-                    appliedRecipe = GoalRecipe(
-                        activity: result.activity.rawValue, direction: result.goal.rawValue
-                    )
-                    autoAdjust = true
-                    calcOpen = false
-                }
-                .presentationDragIndicator(.visible)
-            }
-            .onAppear {
-                appliedRecipe = appModel.nutritionStore.goalRecipe
-                autoAdjust = appModel.nutritionStore.autoAdjustsGoals
+            .onAppear(perform: seedFromStoredRecipe)
+            .task { avgStrain = await appModel.whoopStrainAverage(days: 7) }
+        }
+    }
+
+    // MARK: goal
+
+    private var goalSection: some View {
+        Card {
+            Txt("GOAL", variant: .sectionHeader, color: .labelSecondary)
+            ForEach(GoalCalculator.GoalDirection.allCases) { option in
+                choiceRow(
+                    title: option.label,
+                    subtitle: option.description,
+                    selected: goal == option,
+                    badge: nil
+                ) { goal = option }
+                if option != GoalCalculator.GoalDirection.allCases.last { HairlineDivider() }
             }
         }
     }
 
-    /// Live MacroDonut of macro calories from the current field values (Atwater). Updates as the fields
-    /// change so the energy split previews while tuning the goal numbers.
-    private var macroPreview: some View {
-        let p = Double(proteinNum ?? 0) * CaloriesSupport.kcalPerProteinG
-        let c = Double(carbNum ?? 0) * CaloriesSupport.kcalPerCarbG
-        let f = Double(fatNum ?? 0) * CaloriesSupport.kcalPerFatG
-        let macroCals = p + c + f
-        let hasData = macroCals > 0
+    // MARK: activity
+
+    private var activitySection: some View {
+        Card {
+            HStack {
+                Txt("ACTIVITY", variant: .sectionHeader, color: .labelSecondary)
+                Spacer(minLength: 0)
+                if let avgStrain {
+                    Txt("WHOOP 7-day strain \(Format.oneDecimal(avgStrain))",
+                        variant: .footnote, color: .labelTertiary)
+                }
+            }
+            ForEach(GoalCalculator.ActivityLevel.allCases) { option in
+                choiceRow(
+                    title: option.label,
+                    subtitle: "\(option.hoursPerWeek) · \(option.description)",
+                    selected: activity == option,
+                    badge: suggested == option ? "WHOOP suggests" : nil
+                ) { activity = option }
+                if option != GoalCalculator.ActivityLevel.allCases.last { HairlineDivider() }
+            }
+            if avgStrain == nil {
+                Txt("Connect WHOOP for a suggestion based on your recent strain.",
+                    variant: .footnote, color: .labelTertiary)
+            }
+        }
+    }
+
+    /// One selectable row. Kept deliberately plain: the whole row is the hit target, and selection is
+    /// shown by a checkmark rather than colour alone.
+    private func choiceRow(
+        title: String, subtitle: String, selected: Bool, badge: String?, tap: @escaping () -> Void
+    ) -> some View {
+        Button(action: tap) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Txt(title, variant: .bodyEmphasized)
+                        if let badge {
+                            Txt(badge, variant: .footnote, color: .tint)
+                                .padding(.horizontal, Theme.Spacing.sm)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Theme.Colors.fieldBackground))
+                        }
+                    }
+                    Txt(subtitle, variant: .footnote, color: .labelTertiary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(selected ? Theme.Colors.tint : Theme.Colors.labelTertiary)
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, Theme.Spacing.xs)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+
+    // MARK: result
+
+    private func resultCard(_ r: GoalCalculator.Result) -> some View {
+        let p = Double(r.proteinGoal) * CaloriesSupport.kcalPerProteinG
+        let c = Double(r.carbGoal) * CaloriesSupport.kcalPerCarbG
+        let f = Double(r.fatGoal) * CaloriesSupport.kcalPerFatG
 
         return Card {
             HStack(spacing: Theme.Spacing.xl) {
@@ -175,26 +187,28 @@ struct GoalsView: View {
                         (value: f, color: Theme.Chart.fat, label: "Fat"),
                     ],
                     size: 116, strokeWidth: 14,
-                    centerLabel: hasData ? Format.int(macroCals) : "–",
-                    centerSubLabel: hasData ? "kcal" : "set macros"
+                    centerLabel: Format.int(Double(r.calorieGoal)),
+                    centerSubLabel: "kcal"
                 )
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Txt("MACRO SPLIT", variant: .sectionHeader, color: .labelSecondary)
-                    previewRow("Protein", grams: proteinNum, color: Theme.Chart.protein)
-                    previewRow("Carbs", grams: carbNum, color: Theme.Chart.carbs)
-                    previewRow("Fat", grams: fatNum, color: Theme.Chart.fat)
+                    Txt("YOUR TARGETS", variant: .sectionHeader, color: .labelSecondary)
+                    macroRow("Protein", grams: r.proteinGoal, color: Theme.Chart.protein)
+                    macroRow("Carbs", grams: r.carbGoal, color: Theme.Chart.carbs)
+                    macroRow("Fat", grams: r.fatGoal, color: Theme.Chart.fat)
                 }
                 Spacer(minLength: 0)
             }
+            Txt("BMR \(r.bmr) · maintenance \(r.tdee) kcal",
+                variant: .footnote, color: .labelTertiary)
         }
     }
 
-    private func previewRow(_ label: String, grams: Int?, color: Color) -> some View {
+    private func macroRow(_ label: String, grams: Int, color: Color) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
             Circle().fill(color).frame(width: 9, height: 9)
             Txt(label, variant: .subhead)
             Spacer(minLength: 0)
-            Txt("\(grams ?? 0) g", variant: .subhead, color: .labelSecondary)
+            Txt("\(grams) g", variant: .subhead, color: .labelSecondary)
         }
     }
 
@@ -204,32 +218,42 @@ struct GoalsView: View {
                 Image(systemName: "figure.walk")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Theme.Chart.activity)
-                Circle().fill(Theme.Chart.activity).frame(width: 9, height: 9)
                 Txt("Daily steps", variant: .bodyEmphasized)
                 Spacer(minLength: 0)
                 NumberStepper(value: $steps, range: 0...50_000, step: 1_000, unit: "steps")
                     .contentTransition(.numericText())
             }
-            Txt("A simple daily movement target. Progress comes from your day's step count.",
+            Txt("The one target you set yourself — it isn't part of the calorie maths.",
                 variant: .footnote, color: .labelTertiary)
         }
     }
 
-    private func macroField(_ copy: MacroCopy, text: Binding<String>, placeholder: String) -> some View {
-        Card {
-            HStack {
-                Txt(copy.title, variant: .bodyEmphasized)
-                Spacer(minLength: 0)
-                Txt(copy.density, variant: .footnote, color: .labelSecondary)
-            }
-            Field(label: "\(copy.title) (g/day)", text: text,
-                  placeholder: placeholder, keyboard: .numberPad)
-            Txt(copy.why, variant: .footnote, color: .labelTertiary)
-        }
+    // MARK: state
+
+    /// Restore the previous choice. A recipe written by the OLD goal model (directions like
+    /// "lose1") will not resolve to any current case, so both pickers simply start empty and the
+    /// existing calorie targets stay untouched until a fresh choice is made.
+    private func seedFromStoredRecipe() {
+        guard let recipe = appModel.nutritionStore.goalRecipe else { return }
+        goal = GoalCalculator.GoalDirection(rawValue: recipe.direction)
+        activity = GoalCalculator.ActivityLevel(rawValue: recipe.activity)
     }
 
-    /// Whole-number display string for a goal value (goals are stored as Double, edited as integers).
-    private static func intString(_ value: Double) -> String {
-        String(Int(value.rounded()))
+    private func save() {
+        guard let estimate else { return }
+        onSave(Goals(
+            calorieGoal: Double(estimate.calorieGoal),
+            proteinGoal: Double(estimate.proteinGoal),
+            fatGoal: Double(estimate.fatGoal),
+            carbGoal: Double(estimate.carbGoal),
+            stepsGoal: steps
+        ))
+        // autoAdjust is always true now: with no manual entry there is nothing to preserve, and the
+        // weekly refresh is the only thing that keeps targets in step with a changing body weight.
+        appModel.nutritionStore.setGoalRecipe(
+            GoalRecipe(activity: estimate.activity.rawValue, direction: estimate.goal.rawValue),
+            autoAdjust: true
+        )
+        dismiss()
     }
 }

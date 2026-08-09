@@ -80,6 +80,19 @@ struct WhoopBodyMeasurement: Codable, Equatable, Sendable {
     var maxHeartRate: Int?
 }
 
+/// The identity fields WHOOP holds, used to fill the Gains profile so the user never types them.
+///
+/// Source: `/users-service/v1/users/{custom:user_id}/profile` — a private route that also returns
+/// name, birthday, city and country. Only these four are read; the rest is deliberately ignored.
+/// The cleaner `/developer/v2/user/measurement/body` carries weight and height but NOT age or sex,
+/// which Mifflin–St Jeor needs, so this endpoint is the only way to complete the profile.
+struct WhoopUserProfile: Codable, Equatable, Sendable {
+    var ageYears: Int?
+    var sex: Sex?
+    var weightKg: Double?
+    var heightMeters: Double?
+}
+
 /// One behavior → outcome association WHOOP computed (e.g. "Alcohol · −12%"), restated verbatim.
 /// The app never derives or diagnoses it. Too little data surfaces as `.insufficient` (no number).
 struct WhoopBehaviorImpact: Codable, Equatable, Sendable, Identifiable {

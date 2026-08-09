@@ -14,15 +14,18 @@ final class GoalCalculatorBLSTests: XCTestCase {
     // MARK: pipeline
 
     /// BMR is unchanged by this rewrite; pinned so a future edit to EnergyMath is caught here too.
+    /// 10(65.744) + 6.25(170.18) − 5(32) + 5
+    ///   = 657.44 + 1063.625 − 160 + 5 = 1566.065
+    private let expectedBmr = 1566.065
+
     func testBmrMatchesMifflinStJeor() {
-        // 10(65.744) + 6.25(170.18) − 5(32) + 5 = 1565.56
-        XCTAssertEqual(EnergyMath.computeBmr(profile), 1565.565, accuracy: 0.01)
+        XCTAssertEqual(EnergyMath.computeBmr(profile), expectedBmr, accuracy: 0.01)
     }
 
     func testTdeeUsesActivityMidpoint() {
         let r = GoalCalculator.estimate(profile: profile, activity: .moderate, goal: .maintain)
         XCTAssertEqual(r.bmr, 1566)
-        XCTAssertEqual(Double(r.tdee), 1565.565 * 1.475, accuracy: 1.0)
+        XCTAssertEqual(Double(r.tdee), expectedBmr * 1.475, accuracy: 1.0)
     }
 
     func testGoalCaloriesArePercentagesOfTdee() {

@@ -105,6 +105,28 @@ enum WhoopProjections {
         )
     }
 
+    /// Project `/users-service/v1/users/{id}/profile` into the four identity fields Gains needs.
+    ///
+    /// Every field is optional: a partially-filled WHOOP profile must degrade to "we don't know"
+    /// rather than to a wrong number. `gender` is mapped conservatively — anything that is not
+    /// recognisably male or female becomes `.other`, which `EnergyMath` handles by averaging the
+    /// two Mifflin–St Jeor sex constants rather than assuming one.
+    static func projectUserProfile(_ raw: JSONValue) -> WhoopUserProfile {
+        let sex: Sex?
+        switch raw["gender"].stringValue?.lowercased() {
+        case "male", "m": sex = .male
+        case "female", "f": sex = .female
+        case .some: sex = .other
+        case nil: sex = nil
+        }
+        return WhoopUserProfile(
+            ageYears: raw["age"].numberValue.flatMap { $0 > 0 ? Int($0) : nil },
+            sex: sex,
+            weightKg: raw["weight"].numberValue.flatMap { $0 > 0 ? $0 : nil },
+            heightMeters: raw["height"].numberValue.flatMap { $0 > 0 ? $0 : nil }
+        )
+    }
+
     /// Project the /home aggregate into the dashboard summary. The sticky gauges carry the three
     /// pillar scores + the recovery fill style; the contributors/vitals come from whatever
     /// CONTRIBUTORS_TILE the home payload also inlines (Whoop has been migrating these into /home),

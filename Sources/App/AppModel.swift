@@ -166,7 +166,9 @@ final class AppModel {
         hasAIKey = aiKeyStore.hasKey
         whoopLinked = await whoop.isLinked()
         await mcpSync.syncIfEnabled()
+        await syncProfileFromWhoop()
         await syncWeightFromWhoop()
+        refreshWeeklyGoalsIfDue()
     }
 
     /// The last time WHOOP's weight was successfully read. Drives the "Synced from WHOOP" label.
@@ -196,6 +198,84 @@ final class AppModel {
         }
         logWeight(lb: Units.kgToLb(measurement.weightKg))
         return true
+    }
+
+    /// Mean WHOOP day-strain over the last `days` days, ignoring days with no score. Advisory input
+    /// to the activity suggestion in Goals; nil when unlinked or WHOOP has no scored days yet.
+    func whoopStrainAverage(days: Int = 7) async -> Double? {
+        guard !isSampleData, whoopLinked else { return nil }
+        let points = await whoop.history(metric: .strain, days: days).compactMap(\.value)
+        guard !points.isEmpty else { return nil }
+        return points.reduce(0, +) / Double(points.count)
+    }
+
+    /// Fill age / sex / height from WHOOP so none of them is ever typed. Weight is left to
+    /// `syncWeightFromWhoop`, which also writes the weigh-in trend.
+    ///
+    /// Only fills fields that actually differ, and never overwrites a known value with nil — a
+    /// partially-filled WHOOP profile must not blank out a good local one.
+    @discardableResult
+    func syncProfileFromWhoop() async -> Bool {
+        guard !isSampleData, whoopLinked, var current = profile else { return false }
+        guard let remote = await whoop.userProfile() else { return false }
+
+        var changed = false
+        if let age = remote.ageYears, age != current.ageYears {
+            current.ageYears = age
+            changed = true
+        }
+        if let sex = remote.sex, sex != current.sex {
+            current.sex = sex
+            changed = true
+        }
+        if let meters = remote.heightMeters {
+            let cm = (meters * 100).rounded()
+            if abs(cm - current.heightCm) >= 0.5 {
+                current.heightCm = cm
+                changed = true
+            }
+        }
+        guard changed else { return false }
+        updateProfile(current)
+        return true
+    }
+
+    /// Recompute calorie + macro targets from the trailing 7-day average weight, at most once per
+    /// ISO week.
+    ///
+    /// Weekly rather than daily on purpose: a smart scale pushes a figure most mornings, and normal
+    /// day-to-day swing (hydration, food in transit) is a pound or two. Recomputing on every reading
+    /// would move the targets constantly for no physiological reason, which is unsettling mid-cut.
+    /// So the average is taken and applied once a week — in practice the first time the app is
+    /// opened on or after Monday.
+    ///
+    /// No-op without a goal recipe, which is also the migration path: a recipe written by the old
+    /// model stores a direction like "lose1" that no longer resolves, so nothing is recomputed and
+    /// the existing targets stand until a goal is picked afresh.
+    @discardableResult
+    func refreshWeeklyGoalsIfDue(now: Date = Date()) -> Bool {
+        guard !isSampleData, profile != nil, nutritionStore.goalRecipe != nil else { return false }
+        let week = Self.isoWeekKey(now)
+        guard UserDefaults.standard.string(forKey: Self.weeklyGoalRefreshKey) != week else {
+            return false
+        }
+        UserDefaults.standard.set(week, forKey: Self.weeklyGoalRefreshKey)
+        nutritionStore.autoAdjustGoals(
+            profile: profile!,
+            smoothedWeightKg: weightStore.averageKg(days: 7)
+        )
+        return true
+    }
+
+    private static let weeklyGoalRefreshKey = "@gains/goals/lastWeeklyRefresh"
+
+    /// "2026-W32" — ISO year + week, so the value changes exactly once a week, on Monday
+    /// (ISO weeks start Monday).
+    private static func isoWeekKey(_ date: Date) -> String {
+        var cal = Calendar(identifier: .iso8601)
+        cal.timeZone = .current
+        let parts = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+        return "\(parts.yearForWeekOfYear ?? 0)-W\(parts.weekOfYear ?? 0)"
     }
 
     /// Back-fill the weight trend from Apple Health history (the user's smart-scale weigh-ins). Runs

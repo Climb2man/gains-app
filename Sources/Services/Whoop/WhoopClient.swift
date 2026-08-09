@@ -58,6 +58,10 @@ protocol WhoopService: Sendable {
     /// WHOOP's stored weight/height/max-HR. nil when unlinked or WHOOP holds no weight.
     /// This is the app's weight source: a smart scale pushing to WHOOP lands here.
     func bodyMeasurement() async -> WhoopBodyMeasurement?
+
+    /// WHOOP's age/sex/weight/height, so the Gains profile needs no manual entry. nil when
+    /// unlinked or when the user id cannot be read from the token.
+    func userProfile() async -> WhoopUserProfile?
 }
 
 /// The orchestrating client. An `actor`: the per-day cache state, in-flight de-dup, and
@@ -81,6 +85,16 @@ actor WhoopClient: WhoopService {
     /// In-session only: deliberately NOT persisted. WHOOP stays the source of truth, and the
     /// weigh-in that gets logged from it is already durable in WeightStore.
     private var bodyMeasurementCache: BodyMeasurementCacheEntry?
+
+    /// Age and sex change on the order of years, so this can be cached hard.
+    private static let userProfileTtlMs: Double = 24 * 60 * 60 * 1000
+
+    private struct UserProfileCacheEntry {
+        let fetchedAt: Double
+        let value: WhoopUserProfile
+    }
+
+    private var userProfileCache: UserProfileCacheEntry?
 
     /// Stress monitor path: the date is a path segment here, not a `?date=` query.
     private static func stressPath(_ date: String) -> String {
@@ -445,6 +459,44 @@ actor WhoopClient: WhoopService {
         }
         bodyMeasurementCache = BodyMeasurementCacheEntry(fetchedAt: now, value: model)
         return model
+    }
+
+    /// WHOOP's profile identity fields (age, sex, weight, height).
+    ///
+    /// The path is user-scoped and the id comes from the access token's `custom:user_id` claim.
+    /// Note this is NOT the Cognito `sub` (a UUID) and NOT `custom:account_id` — probing showed
+    /// `sub` 404s and `account_id` is a separate, empty account. 24-hour cache: age and sex change
+    /// about as slowly as anything in the app.
+    func userProfile() async -> WhoopUserProfile? {
+        let now = Date().timeIntervalSince1970 * 1000
+        if let cached = userProfileCache, now - cached.fetchedAt < Self.userProfileTtlMs {
+            return cached.value
+        }
+        guard let token = await tokenStore.getValidAccessToken(),
+              let uid = Self.jwtClaim("custom:user_id", in: token)
+        else { return userProfileCache?.value }
+
+        let result = await authedGet("/users-service/v1/users/\(uid)/profile", query: [:])
+        guard result.status == 200, let body = result.body else { return userProfileCache?.value }
+        let model = WhoopProjections.projectUserProfile(body)
+        userProfileCache = UserProfileCacheEntry(fetchedAt: now, value: model)
+        return model
+    }
+
+    /// Read one claim from a JWT payload. No signature check: this only picks the user id out of a
+    /// token the server already accepted, and a forged value would simply 404.
+    private static func jwtClaim(_ key: String, in token: String) -> String? {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var payload = String(parts[1])
+        payload = payload.replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while payload.count % 4 != 0 { payload.append("=") }
+        guard let data = Data(base64Encoded: payload) else { return nil }
+        let json = JSONValue.decode(data)
+        if let s = json[key].stringValue { return s }
+        if let n = json[key].numberValue { return String(Int(n)) }
+        return nil
     }
 
     /// Strain deep-dive (score + target band, HR-zone time + baselines, steps, strength).
