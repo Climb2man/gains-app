@@ -8,20 +8,11 @@ struct ProfileEditorView: View {
     private let profile: Profile
 
     @State private var name: String
-    @State private var sex: Sex?
-    @State private var age: String
-    @State private var feet: String
-    @State private var inches: String
     @State private var saved = false
 
     init(profile: Profile) {
         self.profile = profile
-        let ftIn = Units.cmToFtIn(profile.heightCm)
         _name = State(initialValue: profile.name ?? "")
-        _sex = State(initialValue: profile.sex)
-        _age = State(initialValue: String(profile.ageYears))
-        _feet = State(initialValue: String(ftIn.feet))
-        _inches = State(initialValue: String(ftIn.inches))
     }
 
     /// Trimmed name to save, capped at 60 chars; empty becomes nil.
@@ -30,61 +21,45 @@ struct ProfileEditorView: View {
         return trimmed.isEmpty ? nil : String(trimmed.prefix(60))
     }
 
-    /// Weight is WHOOP-owned and read-only in this editor, so it must be read from the LIVE profile
-    /// and never from a value snapshotted when the editor opened. Without this, a WHOOP sync landing
-    /// while the editor is open would be silently reverted the moment the user saved an unrelated
-    /// field (name, age, height).
-    private var liveWeightKg: Double { appModel.profile?.weightKg ?? profile.weightKg }
+    /// The live profile. Everything except the name is WHOOP-owned and read-only here, so it must
+    /// come from the current profile rather than a value snapshotted when the editor opened —
+    /// otherwise a WHOOP sync landing while this screen is open would be silently reverted the
+    /// moment the user saved their name.
+    private var live: Profile? { appModel.profile ?? profile }
 
-    private var basicValid: Bool {
-        sex != nil && (Int(age) ?? 0) > 0 && (Int(feet) ?? 0) > 0
+    private var liveWeightKg: Double { live?.weightKg ?? profile.weightKg }
+
+    private var profileSexLabel: String {
+        switch live?.sex {
+        case .male: return "Male"
+        case .female: return "Female"
+        case .other: return "Other"
+        case nil: return "—"
+        }
     }
 
-    /// Candidate Profile from the current inputs (metric), or nil until the basics are valid.
-    /// Read by both the live BMR preview and the "changed" check.
+    private var profileHeightLabel: String {
+        guard let cm = live?.heightCm, cm > 0 else { return "—" }
+        let ftIn = Units.cmToFtIn(cm)
+        return "\(ftIn.feet)' \(ftIn.inches)\""
+    }
+
+    /// Candidate Profile: the live profile with only the name replaced, since the name is now the
+    /// one editable field on this screen.
     private var candidate: Profile? {
-        guard basicValid, let sex, let ageYears = Int(age), let feetVal = Double(feet)
-        else { return nil }
-        let inchesVal = Double(inches) ?? 0
-        return Profile(
-            name: candidateName,
-            sex: sex,
-            ageYears: ageYears,
-            heightCm: Units.ftInToCm(feet: feetVal, inches: inchesVal).rounded(),
-            weightKg: liveWeightKg,
-            createdAt: profile.createdAt
-        )
+        guard var next = live else { return nil }
+        next.name = candidateName
+        return next
     }
 
-    /// Weight is intentionally absent from this comparison: it cannot be edited here, and including
-    /// it would light up the Save button purely because WHOOP synced a new value in the background.
+    /// Only the name can differ. The WHOOP-owned fields are excluded so a background sync cannot
+    /// light up the Save button on a screen the user has not touched.
     private var changed: Bool {
-        guard let candidate else { return false }
-        return candidate.name != profile.name
-            || candidate.sex != profile.sex
-            || candidate.ageYears != profile.ageYears
-            || candidate.heightCm != profile.heightCm
+        candidateName != profile.name
     }
 
     private var bmrText: String {
         Format.int(EnergyMath.computeBmr(candidate ?? profile))
-    }
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// Sex binding animated at the call site so the segmented pill slides, leaving the shared
-    /// `SegmentedChoice` untouched. No animation under Reduce Motion.
-    private var animatedSex: Binding<Sex?> {
-        Binding(
-            get: { sex },
-            set: { newValue in
-                if reduceMotion {
-                    sex = newValue
-                } else {
-                    withAnimation(Theme.Motion.stepTransition) { sex = newValue }
-                }
-            }
-        )
     }
 
     var body: some View {
@@ -103,37 +78,15 @@ struct ProfileEditorView: View {
                         autocap: .words
                     )
 
-                    SegmentedChoice<Sex>(
-                        label: "Sex (for health reference ranges)",
-                        options: [
-                            .init(value: .female, label: "Female"),
-                            .init(value: .male, label: "Male"),
-                            .init(value: .other, label: "Other"),
-                        ],
-                        selection: animatedSex
-                    )
-
-                    FormField(
-                        label: "Age (years)",
-                        text: $age,
-                        placeholder: "e.g. 34",
-                        keyboard: .numberPad
-                    )
-
-                    HStack(spacing: Theme.Spacing.md) {
-                        FormField(
-                            label: "Height (ft)",
-                            text: $feet,
-                            placeholder: "5",
-                            keyboard: .numberPad
-                        )
-                        FormField(
-                            label: "(in)",
-                            text: $inches,
-                            placeholder: "10",
-                            keyboard: .numberPad
-                        )
-                    }
+                    // Sex, age and height are read-only for the same reason as weight:
+                    // AppModel.syncProfileFromWhoop() adopts all three from WHOOP on every launch,
+                    // so an editable field here would accept a change and silently lose it at the
+                    // next sync. Sex is included even though only age and height were asked for —
+                    // it is overwritten by exactly the same code path, so leaving it editable would
+                    // have preserved the bug rather than fixed it.
+                    readOnlyRow("Sex", value: profileSexLabel)
+                    readOnlyRow("Age", value: appModel.profile.map { "\($0.ageYears)" } ?? "—")
+                    readOnlyRow("Height", value: profileHeightLabel)
 
                     // Weight is read-only: WHOOP owns it. A smart scale pushes to WHOOP and
                     // AppModel.syncWeightFromWhoop() adopts the value, so an editable field here
@@ -185,16 +138,27 @@ struct ProfileEditorView: View {
         .onChange(of: editSignature) { saved = false }
     }
 
-    /// Changes whenever any editable field does, so one `onChange` can clear the "saved" confirmation.
-    /// Weight is excluded: it is not editable here, so a WHOOP sync must not clear the confirmation.
-    private var editSignature: String {
-        "\(name)|\(sex?.rawValue ?? "")|\(age)|\(feet)|\(inches)"
+    /// Changes whenever an editable field does, so one `onChange` can clear the "saved"
+    /// confirmation. Only the name qualifies now; a background WHOOP sync must not clear it.
+    private var editSignature: String { name }
+
+    /// A WHOOP-sourced field: label on the left, value on the right, not editable.
+    private func readOnlyRow(_ label: String, value: String) -> some View {
+        HStack {
+            Txt(label, variant: .body, color: .labelSecondary)
+            Spacer(minLength: 0)
+            Txt(value, variant: .body, color: .label)
+        }
+        .padding(.vertical, Theme.Spacing.xs)
+        .accessibilityElement()
+        .accessibilityLabel("\(label): \(value)")
     }
 
     private func save() {
         guard let candidate, changed else { return }
-        // Explicit user edit (age / height / sex), so recompute now rather than waiting for Monday.
-        appModel.updateProfile(candidate, recomputeGoals: true)
+        // Name is the only editable field left and it does not feed the BMR, so there is nothing to
+        // recompute. The WHOOP-owned values that DO affect it are refreshed on their own schedule.
+        appModel.updateProfile(candidate)
         saved = true
     }
 }

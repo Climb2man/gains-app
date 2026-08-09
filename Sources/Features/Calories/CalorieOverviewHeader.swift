@@ -69,44 +69,63 @@ struct CalorieOverviewHeader: View {
                 Text("MACROS")
                     .font(Theme.Font.footnote.weight(.semibold)).tracking(0.5)
                     .foregroundStyle(Theme.Colors.labelTertiary)
-                HStack(spacing: Theme.Spacing.md) {
+                VStack(spacing: Theme.Spacing.lg) {
                     macroRing("Protein", totals.proteinG, goals.proteinGoal, Theme.Chart.protein)
+                    HairlineDivider()
                     macroRing("Carbs", totals.carbsG, goals.carbGoal, Theme.Chart.carbs)
+                    HairlineDivider()
                     macroRing("Fat", totals.fatG, goals.fatGoal, Theme.Chart.fat)
                 }
-                .frame(maxWidth: .infinity)
             }
         }
     }
 
-    /// One macro ring. Fill clamps at 1 so passing the goal does not wind the arc round again; the
-    /// percentage underneath keeps counting so going over is still visible.
+    /// One macro row: ring on the left, name and numbers beside it.
+    ///
+    /// Stacked vertically rather than three abreast. Side by side, each ring got roughly a third of
+    /// the width — tight on a smaller iPhone, and it forced the grams to shrink to fit inside the
+    /// ring. Down the page each row gets the full width, so the ring can stay a legible size and the
+    /// numbers can sit outside it at full size instead of being squeezed into the middle.
+    ///
+    /// Fill clamps at 1 so passing the goal does not wind the arc round again; the percentage keeps
+    /// counting past 100 so going over is still visible.
     private func macroRing(_ label: String, _ eatenG: Double, _ goalG: Double, _ color: Color)
         -> some View {
         let pct = goalG > 0 ? eatenG / goalG : 0
         let over = goalG > 0 && eatenG > goalG
-        return VStack(spacing: Theme.Spacing.sm) {
-            RingChart(progress: min(1, pct), size: 92, strokeWidth: 10,
+        return HStack(spacing: Theme.Spacing.lg) {
+            RingChart(progress: min(1, pct), size: 74, strokeWidth: 9,
                       color: over ? Theme.Colors.warning : color, glow: false) {
-                VStack(spacing: 0) {
-                    Text(goalG > 0 ? "\(Int((pct * 100).rounded()))%" : "–")
-                        .font(Theme.Font.number(size: 19, weight: .bold))
+                Text(goalG > 0 ? "\(Int((pct * 100).rounded()))%" : "–")
+                    .font(Theme.Font.number(size: 17, weight: .bold))
+                    .foregroundStyle(Theme.Colors.label)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Circle().fill(over ? Theme.Colors.warning : color).frame(width: 9, height: 9)
+                    Text(label)
+                        .font(Theme.Font.bodyEmphasized)
                         .foregroundStyle(Theme.Colors.label)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Text("\(Format.int(eatenG))/\(Format.int(goalG))")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Theme.Colors.labelTertiary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                }
+                Text("\(Format.int(eatenG)) / \(Format.int(goalG)) g")
+                    .font(Theme.Font.statNumber)
+                    .foregroundStyle(Theme.Colors.labelSecondary)
+                    .monospacedDigit()
+                if goalG > 0 {
+                    Text(over
+                        ? "\(Format.int(eatenG - goalG)) g over"
+                        : "\(Format.int(goalG - eatenG)) g to go")
+                        .font(Theme.Font.footnote)
+                        .foregroundStyle(over ? Theme.Colors.warning : Theme.Colors.labelTertiary)
                 }
             }
-            Text(label)
-                .font(Theme.Font.footnote.weight(.medium))
-                .foregroundStyle(Theme.Colors.labelSecondary)
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
         .accessibilityElement()
         .accessibilityLabel(
             "\(label) \(Format.int(eatenG)) of \(Format.int(goalG)) grams, "
