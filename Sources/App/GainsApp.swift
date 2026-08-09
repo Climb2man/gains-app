@@ -79,9 +79,12 @@ struct GainsApp: App {
                 }
                 Task { await appModel.load() }
                 appModel.nutritionStore.syncWidgetSnapshot()
-                if let profile = appModel.profile {
-                    appModel.nutritionStore.autoAdjustGoals(profile: profile)
-                }
+                // Goals are deliberately NOT recomputed here. This used to call autoAdjustGoals on
+                // every foreground, which meant targets moved whenever a new weight arrived and the
+                // app was opened — quietly overriding the weekly cadence and contradicting the
+                // "targets refresh every Monday" copy. `load()` above reaches
+                // `refreshWeeklyGoalsIfDue()`, which is gated on the ISO week, so the numbers now
+                // hold steady Monday to Sunday and move once a week.
             }
     }
 }
