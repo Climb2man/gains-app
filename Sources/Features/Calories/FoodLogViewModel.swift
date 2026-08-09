@@ -78,12 +78,23 @@ final class FoodLogViewModel {
     /// Log a suggestion into today. Routes through `logRecent` so it takes the same path as any
     /// other re-log — including the lookup that recovers the original resolved item.
     func logSuggestion(_ candidate: MacroGapRecommender.Candidate) {
+        let key = NutritionStore.normalizeName(candidate.name)
+        // Prefer the real RecentMeal when the suggestion came from one: it carries the use count and
+        // last-used stamp that ordering depends on, which a synthesised stand-in would reset.
+        if let existing = nutrition.recentMeals.first(
+            where: { NutritionStore.normalizeName($0.name) == key }
+        ) {
+            logRecent(existing)
+            return
+        }
         logRecent(RecentMeal(
             name: candidate.name,
             calories: candidate.calories,
             proteinG: candidate.proteinG,
             carbsG: candidate.carbsG,
-            fatG: candidate.fatG
+            fatG: candidate.fatG,
+            useCount: 0,
+            lastUsedAt: ISO8601DateFormatter().string(from: Date())
         ))
     }
     /// Nickname autocomplete matches for the current composer text.
