@@ -9,10 +9,10 @@ final class OnboardingModel {
     /// pushes to WHOOP), and the profile step shows it read-only — so the link has to exist first
     /// or there would be nothing to show. Upstream had profile first, when weight was typed in.
     enum Step: Int, CaseIterable {
-        case welcome, whoop, profile, health, aiKey, goals
+        case welcome, whoop, profile, aiKey, goals
 
         /// Steps that show the progress dots / count toward them (everything after the welcome intro).
-        static let dotted: [Step] = [.whoop, .profile, .health, .aiKey, .goals]
+        static let dotted: [Step] = [.whoop, .profile, .aiKey, .goals]
     }
 
     private(set) var step: Step = OnboardingModel.initialStep
@@ -26,7 +26,6 @@ final class OnboardingModel {
             switch raw {
             case "profile": return .profile
             case "whoop": return .whoop
-            case "health": return .health
             case "aiKey": return .aiKey
             case "goals": return .goals
             default: return .welcome
@@ -70,9 +69,6 @@ final class OnboardingModel {
         !whoopEmail.trimmed.isEmpty && !whoopPassword.isEmpty
     }
 
-    private(set) var healthAvailable = false
-    private(set) var healthBusy = false
-    private(set) var healthConnected = false
 
     var aiKeyDraft = ""
     private(set) var aiKeySaved = false
@@ -133,13 +129,10 @@ final class OnboardingModel {
 
     private let whoop: any WhoopService
     private let aiKeyStore: OpenRouterKeyStore
-    private let health: any HealthService
 
-    init(whoop: any WhoopService, aiKeyStore: OpenRouterKeyStore, health: any HealthService) {
+    init(whoop: any WhoopService, aiKeyStore: OpenRouterKeyStore) {
         self.whoop = whoop
         self.aiKeyStore = aiKeyStore
-        self.health = health
-        healthAvailable = health.isAvailable()
         // Only the step target needs a starting value now. Calories and macros are derived from the
         // goal + activity choice, so seeding them would just be a number the user never chose.
         stepsGoal = Goals.default.stepsGoal
@@ -247,21 +240,6 @@ final class OnboardingModel {
         whoopError = nil
     }
 
-    /// Request HealthKit read access, then advance. Doesn't import a weight (the about-you step
-    /// already captured it); it only establishes the grant so Settings can re-read later. Persists
-    /// the "connected" flag (`AppleHealthKeys`) if a weight comes back, otherwise only "requested".
-    /// A no-op that just advances on a device without HealthKit.
-    func connectAppleHealth() async {
-        guard !healthBusy else { return }
-        healthBusy = true
-        await health.requestAuthorization()
-        let kg = await health.latestWeightKg()
-        UserDefaults.standard.set(true, forKey: AppleHealthKeys.weightRequested)
-        if kg != nil { UserDefaults.standard.set(true, forKey: AppleHealthKeys.weightConnected) }
-        healthBusy = false
-        healthConnected = true
-        advance()
-    }
 
     /// Persist the typed OpenRouter key to the Keychain, then mark saved, clear the draft, and
     /// advance. Never logs the key. A blank/whitespace draft is a no-op.

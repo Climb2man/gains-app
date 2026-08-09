@@ -32,7 +32,7 @@ struct OnboardingFlow: View {
                 content(model)
             } else {
                 Color.clear
-                    .onAppear { model = OnboardingModel(whoop: appModel.whoop, aiKeyStore: appModel.aiKeyStore, health: appModel.health) }
+                    .onAppear { model = OnboardingModel(whoop: appModel.whoop, aiKeyStore: appModel.aiKeyStore) }
             }
         }
         .background(Theme.Colors.background)
@@ -96,7 +96,6 @@ struct OnboardingFlow: View {
         case .welcome: EmptyView()
         case .profile: AboutYouStep(model: model)
         case .whoop: ConnectWhoopStep(model: model)
-        case .health: ConnectAppleHealthStep(model: model)
         case .aiKey: AIKeyStep(model: model)
         case .goals: GoalsStep(model: model, profile: model.buildProfile())
         }
@@ -133,22 +132,6 @@ struct OnboardingFlow: View {
                 AppButton(title: "Connect later", kind: .secondary) { advance(model) }
                     .disabled(model.whoopBusy)
                     .opacity(model.whoopBusy ? 0.5 : 1)
-            }
-
-        case .health:
-            VStack(spacing: Theme.Spacing.sm) {
-                if model.healthAvailable {
-                    AppButton(title: model.healthBusy ? "Connecting…" : "Connect Apple Health", kind: .primary) {
-                        Task { await model.connectAppleHealth() }
-                    }
-                    .disabled(model.healthBusy)
-                    .opacity(model.healthBusy ? 0.5 : 1)
-                    AppButton(title: "Connect later", kind: .secondary) { advance(model) }
-                        .disabled(model.healthBusy)
-                        .opacity(model.healthBusy ? 0.5 : 1)
-                } else {
-                    AppButton(title: "Continue", kind: .primary) { advance(model) }
-                }
             }
 
         case .aiKey:
@@ -336,58 +319,6 @@ private struct ConnectWhoopStep: View {
     }
 }
 
-private struct ConnectAppleHealthStep: View {
-    @Bindable var model: OnboardingModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                BrandLogo(.appleHealth, size: 48)
-                    .accessibilityHidden(true)
-                HStack(spacing: Theme.Spacing.sm) {
-                    Txt("Connect Apple Health", variant: .title1)
-                    InfoDisclosure(
-                        title: "What we read",
-                        body: "Reads your latest weight (e.g. from a scale that syncs to Apple Health). "
-                            + "Nothing enters your record until you review and confirm it. You can "
-                            + "connect later from Settings."
-                    )
-                }
-                Txt(
-                    "Sync your latest weight from Apple Health, for example from a smart scale.",
-                    variant: .body, color: .labelSecondary
-                )
-            }
-
-            if model.healthConnected {
-                ConnectionStatusRow(
-                    title: "Apple Health connected", systemImage: "heart.fill",
-                    state: .linked, hapticOnAppear: true
-                )
-            } else if !model.healthAvailable {
-                ConnectionStatusRow(
-                    title: "Apple Health", systemImage: "heart.fill",
-                    state: .unavailable("Not available on this device")
-                )
-            } else {
-                SurfaceCard {
-                    HStack(spacing: Theme.Spacing.md) {
-                        Image(systemName: "scalemass")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(Theme.Colors.tint)
-                            .frame(width: 30, height: 30)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Txt("Weight", variant: .bodyEmphasized)
-                            Txt("Synced from Apple Health", variant: .footnote, color: .labelSecondary)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
-            }
-        }
-    }
-}
 
 private struct AIKeyStep: View {
     @Bindable var model: OnboardingModel

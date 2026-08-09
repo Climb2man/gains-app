@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- DEVICE (sideload) entitlements, trimmed for free-Apple-ID personal-team signing.
+<!-- DEVICE (sideload) entitlements: deliberately EMPTY.
 
-     Removed vs upstream:
-       - com.apple.security.application-groups: App Groups are a team-scoped entitlement and Apple does
-         not issue them to free personal teams. The GainsWidget target that consumed the group has been
-         removed from project.yml; WidgetSharedStore falls back to UserDefaults.standard (see
-         Sources/Shared/WidgetShared.swift, `UserDefaults(suiteName:) ?? .standard`), so nothing breaks.
-       - keychain-access-groups: KeychainStore passes a nil access group on device
-         (Sources/Services/KeychainStore.swift, the #if targetEnvironment(simulator) split), so iOS uses
-         the app's automatic default group. Declaring a group here would only create a signing mismatch
-         for Sideloadly's free provisioning profile. Whoop tokens still persist normally.
+     Nothing here is an oversight — each entitlement was removed for a reason, and an empty set is
+     exactly what a free Apple ID personal team can sign without friction:
 
-     Kept: HealthKit, so weight imports from Apple Health. If the free personal team refuses to
-     provision it, delete the two lines below and rebuild; weight entry then becomes manual. -->
+       - com.apple.security.application-groups: team-scoped, not issued to free personal teams. The
+         GainsWidget target that needed it is gone.
+       - com.apple.developer.healthkit: also unavailable on a free team (Gains never appeared under
+         iOS Settings → Health → Data Access & Devices). Weight now comes from Whoop, and the whole
+         Apple Health integration has been removed rather than left as a dead button.
+       - keychain-access-groups: KeychainStore passes a nil access group on device (see the
+         #if targetEnvironment(simulator) split), so iOS grants the app's automatic default group.
+         Declaring one would only risk a signing mismatch. Whoop tokens persist normally. -->
 <plist version="1.0">
 <dict>
-	<key>com.apple.developer.healthkit</key>
-	<true/>
 </dict>
 </plist>

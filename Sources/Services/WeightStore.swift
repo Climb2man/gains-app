@@ -41,31 +41,6 @@ final class WeightStore {
         persist()
     }
 
-    /// Back-fill the trend from Apple Health weigh-ins. One entry per local day; a day that already
-    /// has an entry (a manual log or a prior import) is left untouched, so this is idempotent and
-    /// never clobbers a hand-logged value. Returns how many new days were added (0 skips the persist).
-    /// Display only. The canonical profile weight keeps its separate confirm-before-write flow.
-    @discardableResult
-    func importHealthSamples(_ samples: [WeightSampleKg]) -> Int {
-        guard !samples.isEmpty else { return 0 }
-        var existingDays = Set(entries.map(\.date))
-        var byDay: [String: WeightSampleKg] = [:]
-        for sample in samples {
-            let key = FoodLogStore.dayKey(sample.date)
-            if let current = byDay[key], current.date >= sample.date { continue }
-            byDay[key] = sample
-        }
-        var added = 0
-        for (key, sample) in byDay where !existingDays.contains(key) {
-            entries.append(WeightEntry(date: key, kg: sample.kg))
-            existingDays.insert(key)
-            added += 1
-        }
-        guard added > 0 else { return 0 }
-        entries.sort { $0.date < $1.date }
-        persist()
-        return added
-    }
 
     /// The most recent weigh-in in lb, or nil if none logged.
     var latestLb: Double? { entries.last.map { Units.kgToLb($0.kg) } }

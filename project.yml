@@ -63,10 +63,10 @@ targets:
         # forces CODE_SIGN_ENTITLEMENTS for BOTH configs, so a per-config override there is ignored. Here
         # the Release override wins. Debug = Gains.entitlements (bare keychain group) so the UNSIGNED
         # simulator keychain works (SecItem* needs a declared group it can target, else -34018).
-        # Release = Gains-Release.entitlements, which in this sideload fork is HealthKit ONLY: the App
-        # Group is gone with the widget target, and the keychain group is dropped because KeychainStore
-        # passes nil on device (see the #if targetEnvironment(simulator) split) so iOS grants the app's
-        # automatic default group. That keeps the entitlement set to what a free personal team can sign.
+        # Release = Gains-Release.entitlements, which in this sideload fork is EMPTY: App Groups and
+        # HealthKit are both unavailable to a free personal team, and the keychain group is dropped
+        # because KeychainStore passes nil on device (see the #if targetEnvironment(simulator) split)
+        # so iOS grants the app's automatic default group. Nothing left to mismatch at signing time.
         Debug:
           CODE_SIGN_ENTITLEMENTS: Gains.entitlements
         Release:
@@ -89,8 +89,6 @@ targets:
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSHealthShareUsageDescription: "Gains reads your body measurements (weight, body fat, height) so your private health record stays current. Your data never leaves the device."
-        NSHealthUpdateUsageDescription: "Gains can save measurements you confirm back to Apple Health."
         # Barcode scanning (food-logging-spec §7). The camera reads a product barcode entirely
         # on-device; only the resulting UPC/EAN number is sent to the free Open Food Facts lookup.
         # No image, no identity, no key ever leaves the device for a barcode.

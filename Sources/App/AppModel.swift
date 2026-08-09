@@ -67,8 +67,6 @@ final class AppModel {
     let aiKeyStore: OpenRouterKeyStore
     /// The private Whoop client (login / MFA / data). An `actor` behind the `WhoopService` protocol.
     let whoop: any WhoopService
-    /// HealthKit body-measurement reads (weight / body-fat / height / lean mass).
-    let health: any HealthService
 
     /// Designated initializer. Defaults construct the production services and wire the AI provider on
     /// top of the Keychain (BYOK); tests and previews inject stubs. Async link checks don't run here
@@ -83,7 +81,6 @@ final class AppModel {
         journal: JournalStore? = nil,
         secureStore: any SecureStore = KeychainStore(),
         whoop: (any WhoopService)? = nil,
-        health: any HealthService = HealthKitService(),
         selectedDate: Date = Date()
     ) {
         let profileStore = profileStore ?? ProfileStore()
@@ -94,7 +91,6 @@ final class AppModel {
         let aiKeyStore = OpenRouterKeyStore(secureStore: secureStore)
         self.aiKeyStore = aiKeyStore
         self.whoop = whoop ?? WhoopClient()
-        self.health = health
         self.foodLogSettings = foodLogSettings ?? FoodLogSettingsStore()
         let savedFoods = savedFoods ?? SavedFoodsStore()
         self.savedFoods = savedFoods
@@ -289,16 +285,6 @@ final class AppModel {
         return "\(parts.yearForWeekOfYear ?? 0)-W\(parts.weekOfYear ?? 0)"
     }
 
-    /// Back-fill the weight trend from Apple Health history (the user's smart-scale weigh-ins). Runs
-    /// only when Apple Health is connected (an explicit consent step), a no-op otherwise, on the
-    /// sample container, or when there's nothing new. Display only: the canonical profile weight keeps
-    /// its separate confirm-before-write flow. Safe to call on launch and right after connecting Health.
-    func importHealthWeightHistory(days: Int = 365) async {
-        guard !isSampleData else { return }
-        guard UserDefaults.standard.bool(forKey: AppleHealthKeys.weightConnected) else { return }
-        let samples = await health.weightSamplesKg(sinceDays: days)
-        weightStore.importHealthSamples(samples)
-    }
 
     /// Persist + adopt the onboarding profile, flipping the first-run gate so the tabs mount.
     /// Called from the Onboarding flow's `onComplete`.
