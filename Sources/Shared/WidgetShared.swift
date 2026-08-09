@@ -80,6 +80,20 @@ struct CountdownConfig: Codable, Equatable, Sendable {
     }
 
     static var `default`: CountdownConfig { CountdownConfig(targetDate: endOfYear(), label: "") }
+
+    /// Whole days from `now` to the target.
+    ///
+    /// Compared start-of-day to start-of-day rather than by elapsed hours, so "tomorrow" reads as
+    /// 1 day for the whole of today instead of dropping to 0 at midday — which is what anyone
+    /// reading a countdown expects.
+    ///
+    /// **Negative once the date has passed**, deliberately: the caller decides what to do about it.
+    /// Clamping to 0 here would make a target from last March read "Today" forever.
+    func daysRemaining(from now: Date = Date(), calendar: Calendar = .current) -> Int? {
+        let today = calendar.startOfDay(for: now)
+        let target = calendar.startOfDay(for: targetDate)
+        return calendar.dateComponents([.day], from: today, to: target).day
+    }
 }
 
 /// Reads/writes the `WidgetSnapshot` as JSON in the shared App Group `UserDefaults`, so the app's write

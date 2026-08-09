@@ -7,22 +7,21 @@ import SwiftUI
 /// writing a date that nothing displayed. This puts the reading back in front of the user, in the app.
 ///
 /// Deliberately not a Card. It is a reference point, not a metric: it earns one line above the day's
-/// real content and nothing more. It also renders nothing at all until a countdown has been set, so
-/// it costs no space for anyone who does not use it.
+/// real content and nothing more. It renders nothing until a countdown is set, and nothing again once
+/// the date has passed, so it never occupies space it has not earned.
 struct DayCountdownStrip: View {
-    /// Re-read on each appearance rather than held in state: the value is set on another screen, and
-    /// a stale copy would show yesterday's number after editing it.
-    @State private var config: CountdownConfig?
+    /// Read on every render rather than cached in `@State`.
+    ///
+    /// The value is edited on a different screen (Health → Day Countdown). Holding it in state and
+    /// loading it in `onAppear` meant that setting a date and returning here could show the old value
+    /// — or nothing — until the app was relaunched, because a tab that stays mounted does not
+    /// necessarily re-fire `onAppear`. Reading `UserDefaults` is cheap enough to do every time.
+    private var config: CountdownConfig? { WidgetSharedStore.readCountdown() }
 
-    /// Whole days from today to the target, floored at 0. Compared date-to-date rather than by
-    /// elapsed hours, so "tomorrow" reads as 1 day all day today rather than flipping at midday.
+    /// nil when no countdown is set, or when the target has already passed.
     private var daysLeft: Int? {
-        guard let config else { return nil }
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let target = cal.startOfDay(for: config.targetDate)
-        guard let days = cal.dateComponents([.day], from: today, to: target).day else { return nil }
-        return max(0, days)
+        guard let days = config?.daysRemaining(), days >= 0 else { return nil }
+        return days
     }
 
     var body: some View {
@@ -39,28 +38,31 @@ struct DayCountdownStrip: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
 
-                    Text(countdownSuffix(days: days, label: config.label))
+                    Text(Self.suffix(days: days, label: config.label))
                         .font(Theme.Font.footnote)
                         .foregroundStyle(Theme.Colors.labelTertiary)
 
                     Spacer(minLength: 0)
                 }
                 .accessibilityElement()
-                .accessibilityLabel(
-                    days == 0
-                        ? "Today\(config.label.isEmpty ? "" : " is \(config.label)")"
-                        : "\(days) days to \(config.label.isEmpty ? "your target date" : config.label)"
-                )
+                .accessibilityLabel(Self.accessibilityText(days: days, label: config.label))
             }
         }
-        .onAppear { config = WidgetSharedStore.readCountdown() }
     }
 
-    /// "days to Trip" / "days left" / "" — the label is optional, so the sentence has to work without it.
-    private func countdownSuffix(days: Int, label: String) -> String {
+    /// "days to Trip" / "days left" / "is the day" — the label is optional, so the sentence has to
+    /// read properly without one. Static so it can be tested without building a view.
+    static func suffix(days: Int, label: String) -> String {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
         if days == 0 { return trimmed.isEmpty ? "is the day" : "" }
         let unit = days == 1 ? "day" : "days"
         return trimmed.isEmpty ? "\(unit) left" : "\(unit) to \(trimmed)"
+    }
+
+    static func accessibilityText(days: Int, label: String) -> String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if days == 0 { return trimmed.isEmpty ? "Today is the day" : "Today is \(trimmed)" }
+        let unit = days == 1 ? "day" : "days"
+        return "\(days) \(unit) to \(trimmed.isEmpty ? "your target date" : trimmed)"
     }
 }
