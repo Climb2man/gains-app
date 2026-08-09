@@ -58,7 +58,8 @@ final class OverviewModel {
     @ObservationIgnored
     private var dayTotalsCache: (entries: [FoodEntry], key: String, totals: DailyTotals)?
 
-    private var goals: Goals { nutrition.goals }
+    /// Exposed (was private) so Overview's calories-left card can read the targets.
+    var goals: Goals { nutrition.goals }
     var currentStreak: Int { streaks.current }
     var longestStreak: Int { streaks.longest }
 
