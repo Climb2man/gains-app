@@ -221,10 +221,8 @@ private struct AboutYouStep: View {
 
             Txt(
                 model.weightFromWhoop
-                    ? "Weight came from WHOOP. Step on your scale or change it in the WHOOP app and "
-                        + "it updates here automatically."
-                    : "WHOOP has no weight stored yet. Set it in the WHOOP app (or step on your "
-                        + "scale) and Gains picks it up on the next sync.",
+                    ? "From WHOOP — updates when you weigh in."
+                    : "No weight in WHOOP yet. Set it there and it syncs.",
                 variant: .footnote, color: .labelTertiary
             )
         }
@@ -374,8 +372,7 @@ private struct GoalsStep: View {
             Txt("Your goals", variant: .title1)
 
             Txt(
-                "Pick what you're doing and how much you train. Your calories and macros are worked "
-                    + "out from those and your WHOOP profile.",
+                "Calories and macros are worked out from these two.",
                 variant: .body, color: .labelSecondary
             )
 
@@ -403,7 +400,7 @@ private struct GoalsStep: View {
                         Txt("ACTIVITY", variant: .sectionHeader, color: .labelSecondary)
                         Spacer(minLength: 0)
                         if let strain = model.avgDayStrain {
-                            Txt("WHOOP 7-day strain \(Format.oneDecimal(strain))",
+                            Txt("strain \(Format.oneDecimal(strain))",
                                 variant: .footnote, color: .labelTertiary)
                         }
                     }
@@ -459,7 +456,7 @@ private struct GoalsStep: View {
             CalorieBiasCard(selection: $model.calorieBias)
 
             Txt(
-                "Targets refresh every Monday from your latest weight.",
+                "Targets refresh Mondays.",
                 variant: .footnote, color: .labelTertiary, center: true
             )
         }

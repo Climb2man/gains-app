@@ -42,8 +42,7 @@ struct GoalsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                     Txt("Your goals", variant: .largeTitle)
-                    Txt("Pick what you're doing and how much you train. Everything else is worked out "
-                        + "from your WHOOP profile.",
+                    Txt("Calories and macros are worked out from these two.",
                         variant: .body, color: .labelSecondary)
 
                     goalSection
@@ -66,7 +65,7 @@ struct GoalsView: View {
                         .opacity(estimate == nil ? 0.5 : 1)
                         .disabled(estimate == nil)
 
-                    Txt("Targets refresh every Monday from your latest weight.",
+                    Txt("Targets refresh Mondays.",
                         variant: .footnote, color: .labelTertiary, center: true)
                 }
                 .padding(Theme.Spacing.xl)
@@ -115,7 +114,7 @@ struct GoalsView: View {
                 Txt("ACTIVITY", variant: .sectionHeader, color: .labelSecondary)
                 Spacer(minLength: 0)
                 if let avgStrain {
-                    Txt("WHOOP 7-day strain \(Format.oneDecimal(avgStrain))",
+                    Txt("strain \(Format.oneDecimal(avgStrain))",
                         variant: .footnote, color: .labelTertiary)
                 }
             }

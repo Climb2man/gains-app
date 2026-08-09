@@ -56,21 +56,21 @@ enum GoalCalculator {
         /// The defining hours-per-week band, shown beside the label so the choice is unambiguous.
         var hoursPerWeek: String {
             switch self {
-            case .sedentary: return "0 hrs/week"
-            case .light: return "1–3 hrs/week"
-            case .moderate: return "4–6 hrs/week"
-            case .veryActive: return "7–9 hrs/week"
-            case .extraActive: return "10+ hrs/week"
+            case .sedentary: return "0 hrs/wk"
+            case .light: return "1–3 hrs/wk"
+            case .moderate: return "4–6 hrs/wk"
+            case .veryActive: return "7–9 hrs/wk"
+            case .extraActive: return "10+ hrs/wk"
             }
         }
 
         var description: String {
             switch self {
-            case .sedentary: return "No exercise"
-            case .light: return "Light exercise or sport"
-            case .moderate: return "Regular training"
-            case .veryActive: return "Hard training most days"
-            case .extraActive: return "Athlete or physical job"
+            case .sedentary: return "no training"
+            case .light: return "light"
+            case .moderate: return "regular"
+            case .veryActive: return "hard, most days"
+            case .extraActive: return "athlete"
             }
         }
     }
