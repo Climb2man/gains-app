@@ -181,9 +181,9 @@ final class AppModel {
     /// manual fallback the weight trend and goal maths stall until it recovers. The last synced
     /// value stays on disk, so nothing is lost — it just stops advancing.
     @discardableResult
-    func syncWeightFromWhoop() async -> Bool {
+    func syncWeightFromWhoop(force: Bool = false) async -> Bool {
         guard !isSampleData, whoopLinked else { return false }
-        guard let measurement = await whoop.bodyMeasurement() else { return false }
+        guard let measurement = await whoop.bodyMeasurement(force: force) else { return false }
 
         lastWhoopWeightSync = Date()
 

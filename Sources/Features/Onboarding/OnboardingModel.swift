@@ -223,7 +223,7 @@ final class OnboardingModel {
     /// be completed and the goal maths still has an input; the value corrects itself on the first
     /// successful sync afterwards.
     private func pullBodyFromWhoop() async {
-        guard let measurement = await whoop.bodyMeasurement() else { return }
+        guard let measurement = await whoop.bodyMeasurement(force: true) else { return }
         weightFromWhoop = true
         weightLb = Int(Units.kgToLb(measurement.weightKg).rounded())
         if let meters = measurement.heightMeters, meters > 0 {

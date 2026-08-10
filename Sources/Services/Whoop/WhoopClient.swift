@@ -57,7 +57,9 @@ protocol WhoopService: Sendable {
 
     /// WHOOP's stored weight/height/max-HR. nil when unlinked or WHOOP holds no weight.
     /// This is the app's weight source: a smart scale pushing to WHOOP lands here.
-    func bodyMeasurement() async -> WhoopBodyMeasurement?
+    /// `force: true` skips the cache — for the manual Sync button, whose whole purpose is to go and
+    /// look now. Automatic callers pass false and share the 15-minute cache.
+    func bodyMeasurement(force: Bool) async -> WhoopBodyMeasurement?
 
     /// WHOOP's age/sex/weight/height, so the Gains profile needs no manual entry. nil when
     /// unlinked or when the user id cannot be read from the token.
@@ -444,9 +446,10 @@ actor WhoopClient: WhoopService {
     /// Guards `weightKg > 0` deliberately. A WHOOP account with no weight (and the secondary
     /// `custom:account_id` account) answers `0.0`, and logging that as a weigh-in would poison the
     /// trend and the goal math with a zero.
-    func bodyMeasurement() async -> WhoopBodyMeasurement? {
+    func bodyMeasurement(force: Bool = false) async -> WhoopBodyMeasurement? {
         let now = Date().timeIntervalSince1970 * 1000
-        if let cached = bodyMeasurementCache, now - cached.fetchedAt < Self.bodyMeasurementTtlMs {
+        if !force, let cached = bodyMeasurementCache,
+           now - cached.fetchedAt < Self.bodyMeasurementTtlMs {
             return cached.value
         }
         let result = await authedGet(Self.bodyMeasurementPath, query: [:])

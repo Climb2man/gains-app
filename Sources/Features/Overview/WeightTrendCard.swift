@@ -73,7 +73,9 @@ struct WeightTrendCard: View {
             guard !syncing else { return }
             syncing = true
             Task {
-                await appModel.syncWeightFromWhoop()
+                // force: the whole point of the button is to go and look now. Without it the
+                // 15-minute cache made Sync a no-op, since the card already syncs on appear.
+                await appModel.syncWeightFromWhoop(force: true)
                 syncing = false
             }
         } label: {
@@ -114,7 +116,7 @@ struct WeightTrendCard: View {
                     guard !syncing else { return }
                     syncing = true
                     Task {
-                        await appModel.syncWeightFromWhoop()
+                        await appModel.syncWeightFromWhoop(force: true)
                         syncing = false
                     }
                 } label: {
