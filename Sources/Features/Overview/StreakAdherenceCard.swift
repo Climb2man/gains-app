@@ -28,8 +28,19 @@ struct StreakAdherenceCard: View {
                 AdherenceDots(days: weekHits, labels: weekdayLabels)
 
                 weekProgress
+                streakRule
             }
         }
+    }
+
+    /// States the rule plainly, because "on goal" is not self-evident and the two halves work in
+    /// opposite directions — calories are a ceiling, protein a floor.
+    ///
+    /// Written as a flat line rather than an `InfoDisclosure`: this card is already a `TappableCard`,
+    /// and a button nested inside a button has its tap swallowed by the outer one.
+    private var streakRule: some View {
+        Txt("On goal = at or under your calories, and at or above your protein, on a day you logged.",
+            variant: .footnote, color: .labelTertiary)
     }
 
     private var weekProgress: some View {
