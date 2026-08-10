@@ -73,20 +73,30 @@ struct WhoopRecoveryCard: View {
         .accessibilityHint("Opens \(wheel.name) detail")
     }
 
+    /// Sleep · Recovery · Strain, left to right — the order the day happens in, and the order WHOOP
+    /// itself uses. Recovery sits in the middle because it is the headline reading and the other two
+    /// are its inputs: sleep feeds it, strain spends it.
+    ///
+    /// Built by appending in that order rather than inserting, since sleep and strain are each
+    /// optional — a day with no strain yet must still put recovery in the middle of what remains.
     private func wheels(pct: Double) -> [Wheel] {
-        var result = [
-            Wheel(name: "Recovery", progress: pct / 100, centerValue: "\(Int(pct.rounded()))%",
-                  accent: Theme.Chart.recovery, route: .recovery(day: day)),
-        ]
-        if let strain = summary?.dayStrain {
-            result.append(Wheel(name: "Strain", progress: min(1, strain / strainMax),
-                                 centerValue: Format.oneDecimal(strain),
-                                 accent: Theme.Chart.strain, route: .strain(day: day)))
-        }
+        var result: [Wheel] = []
         if let sleep = summary?.sleepHours {
             result.append(Wheel(name: "Sleep", progress: min(1, sleep / 8),
                                  centerValue: "\(Format.oneDecimal(sleep))h",
                                  accent: Theme.Chart.sleep, route: .sleep(day: day)))
+        }
+        // Banded green/yellow/red rather than flat green. The recovery calendar and the hero
+        // gradient already use the band, so a flat-green ring here meant the same reading showed
+        // as green in one place and red in another.
+        result.append(
+            Wheel(name: "Recovery", progress: pct / 100, centerValue: "\(Int(pct.rounded()))%",
+                  accent: Theme.Chart.recoveryBand(pct), route: .recovery(day: day))
+        )
+        if let strain = summary?.dayStrain {
+            result.append(Wheel(name: "Strain", progress: min(1, strain / strainMax),
+                                 centerValue: Format.oneDecimal(strain),
+                                 accent: Theme.Chart.strain, route: .strain(day: day)))
         }
         return result
     }
