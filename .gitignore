@@ -25,3 +25,7 @@ ExportOptions.plist
 .DS_Store
 
 Gains.xcodeproj/
+
+# Personal sideload notes (kept off the repo, copies live on the NAS)
+NEXT-STEPS.md
+SIDELOAD-README.md
