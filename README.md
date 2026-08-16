@@ -1,5 +1,24 @@
 # Gains
 
+> ### Personal fork
+>
+> A fork of **[RightNxw/gains-app](https://github.com/RightNxw/gains-app)** by Ricardo Landeros,
+> modified to build without a Mac (GitHub's macOS runners) and to run on a **free Apple ID**.
+>
+> **Removed**, because a free Apple ID cannot provision the entitlements they need:
+> - **Lock-screen widgets** — require App Groups to share data with the app.
+> - **Apple Health import** — HealthKit is not granted to free personal teams.
+>
+> **Changed:**
+> - Weight, height, age and sex come from **Whoop**; none of them are typed in.
+> - Calorie and macro targets use the **Bigger Leaner Stronger** method (Matthews, ch. 17):
+>   BMR → TDEE → a percentage of TDEE → a per-goal macro split. Two inputs: goal and activity.
+> - Dark theme throughout, with recovery shown in Whoop's green/yellow/red bands.
+>
+> **The screenshots below are the original author's** and still show the widgets, Apple Health
+> and goal calculator that this fork no longer has.
+
+
 A private, local-first iPhone app that keeps your health data in one encrypted record on your device: nutrition, body weight, steps and activity, and Whoop recovery, sleep, and strain. Native Swift/SwiftUI, iOS 18+.
 
 ## Screens
