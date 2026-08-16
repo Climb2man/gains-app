@@ -134,6 +134,7 @@ final class AppModel {
         }
         profileStore.reload()
         profile = profileStore.profile
+        loadLastGoalRefresh()
         await refreshLinks()
     }
 
@@ -269,12 +270,59 @@ final class AppModel {
         guard UserDefaults.standard.string(forKey: Self.weeklyGoalRefreshKey) != week else {
             return false
         }
-        UserDefaults.standard.set(week, forKey: Self.weeklyGoalRefreshKey)
-        nutritionStore.autoAdjustGoals(profile: profile)
+        applyGoalRefresh(profile: profile, now: now)
         return true
     }
 
+    /// Recompute the targets now, regardless of whether this week's refresh has already run.
+    ///
+    /// Exists because a correct weekly refresh is invisible: if the weight has not moved the numbers
+    /// are identical, which looks exactly like nothing happening. This gives a way to ask for it
+    /// deliberately and see the timestamp move.
+    ///
+    /// Returns false when there is nothing to recompute — no profile, or no saved goal recipe
+    /// (i.e. a goal has never been chosen), which is the usual reason targets appear frozen.
+    @discardableResult
+    func refreshGoalsNow(now: Date = Date()) -> Bool {
+        guard !isSampleData, let profile, nutritionStore.goalRecipe != nil else { return false }
+        applyGoalRefresh(profile: profile, now: now)
+        return true
+    }
+
+    /// The single write path, so the week marker and the timestamp can never disagree.
+    private func applyGoalRefresh(profile: Profile, now: Date) {
+        UserDefaults.standard.set(Self.isoWeekKey(now), forKey: Self.weeklyGoalRefreshKey)
+        UserDefaults.standard.set(now.timeIntervalSince1970, forKey: Self.weeklyGoalRefreshAtKey)
+        lastGoalRefresh = now
+        nutritionStore.autoAdjustGoals(profile: profile)
+    }
+
+    /// When the targets were last recomputed, or nil if never. Read once at init from
+    /// `UserDefaults` and kept in memory afterwards so the UI observes changes to it.
+    var lastGoalRefresh: Date?
+
+    /// The next Monday at midnight local — when the targets will recompute on their own.
+    static func nextWeeklyGoalRefresh(after now: Date = Date()) -> Date? {
+        var cal = Calendar(identifier: .iso8601)
+        cal.timeZone = .current
+        // weekday 2 == Monday. `.nextTime` rolls forward to the next matching instant, so calling
+        // this ON a Monday gives the following Monday rather than today.
+        return cal.nextDate(
+            after: now,
+            matching: DateComponents(hour: 0, minute: 0, second: 0, weekday: 2),
+            matchingPolicy: .nextTime
+        )
+    }
+
     private static let weeklyGoalRefreshKey = "@gains/goals/lastWeeklyRefresh"
+    private static let weeklyGoalRefreshAtKey = "@gains/goals/lastWeeklyRefreshAt"
+
+    /// Seed `lastGoalRefresh` from disk. Called from `load()`, since the value has to survive
+    /// relaunches but should not be re-read on every render.
+    private func loadLastGoalRefresh() {
+        let stamp = UserDefaults.standard.double(forKey: Self.weeklyGoalRefreshAtKey)
+        lastGoalRefresh = stamp > 0 ? Date(timeIntervalSince1970: stamp) : nil
+    }
 
     /// "2026-W32" — ISO year + week, so the value changes exactly once a week, on Monday
     /// (ISO weeks start Monday).

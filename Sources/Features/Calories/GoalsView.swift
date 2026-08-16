@@ -20,6 +20,9 @@ struct GoalsView: View {
     @State private var bias: CalorieBias = .balanced
     /// 7-day mean WHOOP day-strain, used only to suggest an activity band. nil until loaded/unlinked.
     @State private var avgStrain: Double?
+    /// Transient confirmation after a manual refresh, so the tap has visible consequence even when
+    /// the recomputed numbers are identical.
+    @State private var refreshNote: String?
 
     init(goals: Goals, onSave: @escaping (Goals) -> Void) {
         self.goals = goals
@@ -68,8 +71,7 @@ struct GoalsView: View {
                         .opacity(estimate == nil ? 0.5 : 1)
                         .disabled(estimate == nil)
 
-                    Txt("Targets refresh Mondays.",
-                        variant: .footnote, color: .labelTertiary, center: true)
+                    refreshStatus
                 }
                 .padding(Theme.Spacing.xl)
             }
@@ -93,6 +95,48 @@ struct GoalsView: View {
             }
             .task { avgStrain = await appModel.whoopStrainAverage(days: 7) }
         }
+    }
+
+    /// When the targets last recomputed, when they next will, and a way to do it now.
+    ///
+    /// This exists because a correct weekly refresh is invisible: if the weight has not moved the
+    /// numbers come out identical, which is indistinguishable from it never having run. Showing the
+    /// timestamp makes "is this working?" answerable without reading the source.
+    private var refreshStatus: some View {
+        Card {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Txt("TARGETS", variant: .sectionHeader, color: .labelSecondary)
+                    Txt(lastRefreshText, variant: .footnote, color: .labelTertiary)
+                    Txt(nextRefreshText, variant: .footnote, color: .labelTertiary)
+                }
+                Spacer(minLength: 0)
+                Button("Refresh now") {
+                    let did = appModel.refreshGoalsNow()
+                    refreshNote = did
+                        ? "Recalculated from your current weight."
+                        : "Pick a goal and activity level first, then save."
+                }
+                .buttonStyle(.bordered)
+                .font(Theme.Font.footnote.weight(.semibold))
+                .tint(Theme.Colors.tint)
+            }
+            if let refreshNote {
+                Txt(refreshNote, variant: .footnote, color: .labelSecondary)
+            }
+        }
+    }
+
+    private var lastRefreshText: String {
+        guard let last = appModel.lastGoalRefresh else {
+            return "Never refreshed - save a goal to start."
+        }
+        return "Last refreshed " + last.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private var nextRefreshText: String {
+        guard let next = AppModel.nextWeeklyGoalRefresh() else { return "Refreshes Mondays" }
+        return "Next " + next.formatted(date: .abbreviated, time: .omitted)
     }
 
     // MARK: goal
