@@ -221,6 +221,45 @@ final class AppModel {
         return points.reduce(0, +) / Double(points.count)
     }
 
+    /// Mean whole-day energy burned (kcal) across the last `days` COMPLETE days — Whoop's measured
+    /// answer to the same question `GoalCalculator` estimates as TDEE.
+    ///
+    /// Today is deliberately excluded. A day in progress has only banked part of its burn, so
+    /// averaging it in drags the mean down and would understate the measurement — the one mistake
+    /// that would make this comparison actively misleading.
+    ///
+    /// Returns nil below `minimumSamples` usable days: a mean over one or two days says more about
+    /// those days than about the user, and a number shown that confidently would be believed.
+    func whoopCalorieAverage(
+        days: Int = 7,
+        minimumSamples: Int = 4
+    ) async -> (mean: Double, sampleCount: Int)? {
+        guard !isSampleData, whoopLinked else { return nil }
+        // days + 1 so that dropping today still leaves a full `days` window of complete days.
+        let points = await whoop.history(metric: .calories, days: days + 1)
+        // `history` returns oldest-first over a window that always ends today, so the last point
+        // is today's partial day.
+        let values = points.dropLast().compactMap(\.value).filter { $0 > 0 }
+        guard values.count >= minimumSamples else { return nil }
+        return (values.reduce(0, +) / Double(values.count), values.count)
+    }
+
+    /// The TDEE the goal formula is currently using: BMR from the Whoop-sourced profile, times the
+    /// activity factor saved in the goal recipe. nil until a goal has been saved.
+    var formulaTdee: Int? {
+        guard let profile,
+              let recipe = nutritionStore.goalRecipe,
+              let activity = GoalCalculator.ActivityLevel(rawValue: recipe.activity),
+              let direction = GoalCalculator.GoalDirection(rawValue: recipe.direction)
+        else { return nil }
+        return GoalCalculator.estimate(profile: profile, activity: activity, goal: direction).tdee
+    }
+
+    /// The activity band saved in the goal recipe, for labelling what the formula assumed.
+    var goalActivity: GoalCalculator.ActivityLevel? {
+        nutritionStore.goalRecipe.flatMap { GoalCalculator.ActivityLevel(rawValue: $0.activity) }
+    }
+
     /// Fill age / sex / height from WHOOP so none of them is ever typed. Weight is left to
     /// `syncWeightFromWhoop`, which also writes the weigh-in trend.
     ///

@@ -240,6 +240,9 @@ struct FoodLogView: View {
                 }
                 activityStrip
                 weeklyTrendsCard
+                // Whoop's measured whole-day burn vs the formula's TDEE. Read-only, and a 7-day
+                // average, so it does not belong to the selected day the way the cards above do.
+                TdeeCompareCard()
                 foodQualityView
             }
         }

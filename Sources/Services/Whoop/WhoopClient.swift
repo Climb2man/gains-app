@@ -17,6 +17,9 @@ struct WhoopMfaHandle: Sendable, Equatable {
 /// A metric exposed as a dated trend series.
 enum WhoopHistoryMetric: String, Sendable, Equatable {
     case recovery, hrv, rhr, strain
+    /// Whole-day energy burned (kcal), including BMR — not the "active calories" slice. This is the
+    /// one Whoop figure that is directly comparable to a computed TDEE.
+    case calories
 }
 
 /// One dated point in a trend series. `value` is nil when that day has no data.
@@ -594,6 +597,7 @@ actor WhoopClient: WhoopService {
         case .hrv: return summary.hrvMs
         case .rhr: return summary.rhrBpm
         case .strain: return summary.dayStrain
+        case .calories: return summary.calories
         }
     }
 
