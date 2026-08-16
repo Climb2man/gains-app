@@ -233,8 +233,19 @@ private struct PillarRingsCard: View {
     let summary: WhoopSummary
     let day: String
 
+    /// Sleep · Recovery · Strain, left to right — the order the day happens in, and the same order
+    /// the Overview card uses. Recovery sits in the middle because it is the headline reading and
+    /// the other two are its inputs: sleep feeds it, strain spends it.
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
+            PillarRingLink(route: .sleep(day: day), label: "Sleep detail") {
+                PillarRing(
+                    label: "SLEEP",
+                    progress: (summary.sleepPerformancePct ?? 0) / 100,
+                    color: Theme.Chart.sleep,
+                    valueText: summary.sleepPerformancePct.map { "\(Int($0.rounded()))%" } ?? "–"
+                )
+            }
             PillarRingLink(route: .recovery(day: day), label: "Recovery detail") {
                 PillarRing(
                     label: "RECOVERY",
@@ -250,14 +261,6 @@ private struct PillarRingsCard: View {
                     color: Theme.Chart.strain,
                     valueText: summary.dayStrain.map { WhoopFormat.oneDecimal($0) } ?? "–",
                     subText: "/ \(Int(WhoopScreen.strainMax))"
-                )
-            }
-            PillarRingLink(route: .sleep(day: day), label: "Sleep detail") {
-                PillarRing(
-                    label: "SLEEP",
-                    progress: (summary.sleepPerformancePct ?? 0) / 100,
-                    color: Theme.Chart.sleep,
-                    valueText: summary.sleepPerformancePct.map { "\(Int($0.rounded()))%" } ?? "–"
                 )
             }
         }
